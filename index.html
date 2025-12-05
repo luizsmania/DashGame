@@ -15,6 +15,96 @@
             <p>Dash into monsters to defeat them!</p>
         </div>
     </div>
+    
+    <!-- Game Mode Selection -->
+    <div id="modeSelection" class="tutorial-overlay hidden">
+        <div class="tutorial-content">
+            <h1>Select Game Mode</h1>
+            <div class="mode-grid">
+                <button class="mode-button" data-mode="endless">
+                    <h3>Endless</h3>
+                    <p>Survive as long as possible. Difficulty increases over time.</p>
+                </button>
+                <button class="mode-button" data-mode="timeAttack">
+                    <h3>Time Attack</h3>
+                    <p>Survive for 5 minutes. Beat the clock!</p>
+                </button>
+                <button class="mode-button" data-mode="killTarget">
+                    <h3>Kill Target</h3>
+                    <p>Kill 100 monsters as fast as possible.</p>
+                </button>
+                <button class="mode-button" data-mode="hardcore">
+                    <h3>Hardcore</h3>
+                    <p>One hit and you're out. Ultimate challenge!</p>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Tutorial Overlay -->
+    <div id="tutorialOverlay" class="tutorial-overlay">
+        <div class="tutorial-content">
+            <h1>Welcome to Dash Combat!</h1>
+            <div class="tutorial-section">
+                <h2>🎮 How to Play</h2>
+                <div class="tutorial-item">
+                    <strong>Movement:</strong>
+                    <p>Use <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or <kbd>Arrow Keys</kbd> to move your ninja around the arena.</p>
+                </div>
+                <div class="tutorial-item">
+                    <strong>Dash Attack:</strong>
+                    <p><kbd>Left Click</kbd> anywhere on the screen to dash to that location. Dashing into monsters will defeat them!</p>
+                </div>
+                <div class="tutorial-item">
+                    <strong>Objective:</strong>
+                    <p>Survive as long as possible and defeat as many monsters as you can. The game gets harder over time!</p>
+                </div>
+            </div>
+            
+            <div class="tutorial-section">
+                <h2>💡 Game Mechanics</h2>
+                <ul>
+                    <li><strong>Health:</strong> You start with 5 hearts. Monsters damage you when they touch you (unless you're dashing).</li>
+                    <li><strong>Invulnerability:</strong> After taking damage, you're briefly invulnerable (you'll flash).</li>
+                    <li><strong>Difficulty:</strong> Monsters spawn faster and move quicker as time passes.</li>
+                    <li><strong>Scoring:</strong> Each monster you defeat adds to your kill count. Beat your record!</li>
+                </ul>
+            </div>
+            
+            <div class="tutorial-section">
+                <h2>⌨️ Controls Summary</h2>
+                <div class="controls-grid">
+                    <div class="control-item">
+                        <kbd>W</kbd> / <kbd>↑</kbd> - Move Up
+                    </div>
+                    <div class="control-item">
+                        <kbd>S</kbd> / <kbd>↓</kbd> - Move Down
+                    </div>
+                    <div class="control-item">
+                        <kbd>A</kbd> / <kbd>←</kbd> - Move Left
+                    </div>
+                    <div class="control-item">
+                        <kbd>D</kbd> / <kbd>→</kbd> - Move Right
+                    </div>
+                    <div class="control-item">
+                        <kbd>Mouse Click</kbd> - Dash to cursor
+                    </div>
+                    <div class="control-item">
+                        <kbd>R</kbd> - Restart (when game over)
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tutorial-footer">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="dontShowAgain">
+                    <span>Don't show this tutorial again</span>
+                </label>
+                <button id="startGameBtn" class="start-button">Start Game</button>
+            </div>
+        </div>
+    </div>
+    
     <script src="game.js"></script>
 </body>
 </html>
