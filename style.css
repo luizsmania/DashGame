@@ -276,3 +276,243 @@ kbd {
     line-height: 1.5;
 }
 
+/* Main Menu Overlay */
+#mainMenu {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.95);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1001;
+    backdrop-filter: blur(5px);
+}
+
+#mainMenu.hidden {
+    display: none;
+}
+
+.menu-content {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    border: 2px solid #4a9eff;
+    border-radius: 15px;
+    padding: 60px 40px;
+    max-width: 500px;
+    text-align: center;
+    color: #ffffff;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    animation: slideIn 0.3s ease-out;
+}
+
+#mainMenu h1 {
+    font-size: 48px;
+    margin-bottom: 50px;
+    color: #4a9eff;
+    text-shadow: 0 0 10px rgba(74, 158, 255, 0.5);
+}
+
+.menu-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.menu-button {
+    background: linear-gradient(135deg, #4a9eff 0%, #357abd 100%);
+    border: none;
+    color: white;
+    padding: 15px 30px;
+    font-size: 18px;
+    font-weight: bold;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(74, 158, 255, 0.4);
+}
+
+.menu-button:hover {
+    background: linear-gradient(135deg, #5aaeff 0%, #459acd 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(74, 158, 255, 0.6);
+}
+
+.menu-button:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 10px rgba(74, 158, 255, 0.4);
+}
+
+/* Stats Screen */
+#statsScreen,
+#achievementsScreen,
+#settingsScreen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1002;
+    backdrop-filter: blur(5px);
+}
+
+#statsScreen.hidden,
+#achievementsScreen.hidden,
+#settingsScreen.hidden {
+    display: none;
+}
+
+.stats-container {
+    margin: 30px 0;
+    text-align: left;
+}
+
+.stats-section {
+    background: rgba(15, 52, 96, 0.5);
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    border-left: 4px solid #4a9eff;
+}
+
+.stats-section h2 {
+    color: #4a9eff;
+    margin-bottom: 15px;
+    font-size: 20px;
+    border-bottom: 2px solid #4a9eff;
+    padding-bottom: 10px;
+}
+
+.stat-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    color: #e0e0e0;
+    font-size: 16px;
+    border-bottom: 1px solid rgba(74, 158, 255, 0.3);
+}
+
+.stat-row span:first-child {
+    font-weight: bold;
+    color: #4a9eff;
+}
+
+.stat-row span:last-child {
+    color: #ffd700;
+}
+
+/* Achievements List */
+.achievements-list {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+    margin: 30px 0;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.achievement-item {
+    background: rgba(15, 52, 96, 0.5);
+    border: 2px solid #4a9eff;
+    border-radius: 8px;
+    padding: 15px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.achievement-item.locked {
+    opacity: 0.6;
+    border-color: #666666;
+}
+
+.achievement-item:hover {
+    background: rgba(15, 52, 96, 0.8);
+    box-shadow: 0 0 15px rgba(74, 158, 255, 0.4);
+}
+
+.achievement-item.locked:hover {
+    background: rgba(15, 52, 96, 0.5);
+    box-shadow: none;
+}
+
+.achievement-icon {
+    font-size: 32px;
+    margin-bottom: 10px;
+}
+
+.achievement-name {
+    font-weight: bold;
+    color: #4a9eff;
+    font-size: 14px;
+    margin-bottom: 5px;
+}
+
+.achievement-desc {
+    color: #e0e0e0;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.achievement-status {
+    font-size: 11px;
+    color: #ffd700;
+    margin-top: 8px;
+}
+
+.achievement-item.locked .achievement-status {
+    color: #999999;
+}
+
+/* Settings Screen */
+.settings-container {
+    margin: 30px 0;
+    text-align: left;
+}
+
+.setting-item {
+    background: rgba(15, 52, 96, 0.5);
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.setting-item label {
+    display: block;
+    color: #4a9eff;
+    font-weight: bold;
+    margin-bottom: 15px;
+    font-size: 16px;
+}
+
+.language-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.lang-button {
+    background: rgba(74, 158, 255, 0.3);
+    border: 2px solid #4a9eff;
+    color: #e0e0e0;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    flex: 1;
+}
+
+.lang-button:hover {
+    background: rgba(74, 158, 255, 0.5);
+}
+
+.lang-button.active {
+    background: linear-gradient(135deg, #4a9eff 0%, #357abd 100%);
+    color: white;
+    box-shadow: 0 0 10px rgba(74, 158, 255, 0.6);
+}
+
+

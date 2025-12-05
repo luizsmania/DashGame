@@ -16,53 +16,124 @@
         </div>
     </div>
     
+    <!-- Main Menu -->
+    <div id="mainMenu" class="menu-overlay">
+        <div class="menu-content">
+            <h1 id="menuTitle">Main Menu</h1>
+            <div class="menu-buttons">
+                <button class="menu-button" id="btnPlayGame">Play Game</button>
+                <button class="menu-button" id="btnStats">Stats</button>
+                <button class="menu-button" id="btnAchievements">Achievements</button>
+                <button class="menu-button" id="btnSettings">Settings</button>
+            </div>
+        </div>
+    </div>
+    
     <!-- Game Mode Selection -->
     <div id="modeSelection" class="tutorial-overlay hidden">
         <div class="tutorial-content">
-            <h1>Select Game Mode</h1>
+            <h1 id="modeSelectionTitle">Select Game Mode</h1>
             <div class="mode-grid">
                 <button class="mode-button" data-mode="endless">
-                    <h3>Endless</h3>
-                    <p>Survive as long as possible. Difficulty increases over time.</p>
+                    <h3 id="mode-endless">Endless</h3>
+                    <p id="mode-endless-desc">Survive as long as possible. Difficulty increases over time.</p>
                 </button>
                 <button class="mode-button" data-mode="timeAttack">
-                    <h3>Time Attack</h3>
-                    <p>Survive for 5 minutes. Beat the clock!</p>
+                    <h3 id="mode-timeAttack">Time Attack</h3>
+                    <p id="mode-timeAttack-desc">Survive for 5 minutes. Beat the clock!</p>
                 </button>
                 <button class="mode-button" data-mode="killTarget">
-                    <h3>Kill Target</h3>
-                    <p>Kill 100 monsters as fast as possible.</p>
+                    <h3 id="mode-killTarget">Kill Target</h3>
+                    <p id="mode-killTarget-desc">Kill 100 monsters as fast as possible.</p>
                 </button>
                 <button class="mode-button" data-mode="hardcore">
-                    <h3>Hardcore</h3>
-                    <p>One hit and you're out. Ultimate challenge!</p>
+                    <h3 id="mode-hardcore">Hardcore</h3>
+                    <p id="mode-hardcore-desc">One hit and you're out. Ultimate challenge!</p>
                 </button>
             </div>
+            <button class="start-button" id="btnBackToMenu">Back</button>
+        </div>
+    </div>
+    
+    <!-- Stats Screen -->
+    <div id="statsScreen" class="tutorial-overlay hidden">
+        <div class="tutorial-content">
+            <h1 id="statsTitle">Stats</h1>
+            <div class="stats-container">
+                <div class="stats-section">
+                    <h2 id="allTimeTitle">All Time Statistics</h2>
+                    <div class="stat-row">
+                        <span id="totalKillsLabel">Total Kills:</span>
+                        <span id="totalKillsValue">0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span id="totalPlayTimeLabel">Total Play Time:</span>
+                        <span id="totalPlayTimeValue">0h 0m</span>
+                    </div>
+                    <div class="stat-row">
+                        <span id="highScoreLabel">High Score:</span>
+                        <span id="highScoreValue">0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span id="recordLabel">Record:</span>
+                        <span id="recordValue">0</span>
+                    </div>
+                </div>
+            </div>
+            <button class="start-button" id="btnBackFromStats">Back</button>
+        </div>
+    </div>
+    
+    <!-- Achievements Screen -->
+    <div id="achievementsScreen" class="tutorial-overlay hidden">
+        <div class="tutorial-content">
+            <h1 id="achievementsTitle">Achievements</h1>
+            <div id="achievementsList" class="achievements-list">
+                <!-- Populated by JavaScript -->
+            </div>
+            <button class="start-button" id="btnBackFromAchievements">Back</button>
+        </div>
+    </div>
+    
+    <!-- Settings Screen -->
+    <div id="settingsScreen" class="tutorial-overlay hidden">
+        <div class="tutorial-content">
+            <h1 id="settingsTitle">Settings</h1>
+            <div class="settings-container">
+                <div class="setting-item">
+                    <label id="languageLabel">Language:</label>
+                    <div class="language-buttons">
+                        <button class="lang-button" data-lang="en" id="langBtn-en">English</button>
+                        <button class="lang-button" data-lang="pt" id="langBtn-pt">Português</button>
+                    </div>
+                </div>
+            </div>
+            <button class="start-button" id="btnBackFromSettings">Back</button>
         </div>
     </div>
     
     <!-- Tutorial Overlay -->
     <div id="tutorialOverlay" class="tutorial-overlay">
         <div class="tutorial-content">
-            <h1>Welcome to Dash Combat!</h1>
+            <h1 id="tutorialTitle">Welcome to Dash Combat!</h1>
             <div class="tutorial-section">
-                <h2>🎮 How to Play</h2>
+                <h2 id="howToPlayTitle">🎮 How to Play</h2>
                 <div class="tutorial-item">
-                    <strong>Movement:</strong>
-                    <p>Use <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or <kbd>Arrow Keys</kbd> to move your ninja around the arena.</p>
+                    <strong id="movementLabel">Movement:</strong>
+                    <p id="movementDesc">Use <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or <kbd>Arrow Keys</kbd> to move your ninja around the arena.</p>
                 </div>
                 <div class="tutorial-item">
-                    <strong>Dash Attack:</strong>
-                    <p><kbd>Left Click</kbd> anywhere on the screen to dash to that location. Dashing into monsters will defeat them!</p>
+                    <strong id="dashAttackLabel">Dash Attack:</strong>
+                    <p id="dashAttackDesc"><kbd>Left Click</kbd> anywhere on the screen to dash to that location. Dashing into monsters will defeat them!</p>
                 </div>
                 <div class="tutorial-item">
-                    <strong>Objective:</strong>
-                    <p>Survive as long as possible and defeat as many monsters as you can. The game gets harder over time!</p>
+                    <strong id="objectiveLabel">Objective:</strong>
+                    <p id="objectiveDesc">Survive as long as possible and defeat as many monsters as you can. The game gets harder over time!</p>
                 </div>
             </div>
             
             <div class="tutorial-section">
-                <h2>💡 Game Mechanics</h2>
+                <h2 id="gameMechanicsTitle">💡 Game Mechanics</h2>
                 <ul>
                     <li><strong>Health:</strong> You start with 5 hearts. Monsters damage you when they touch you (unless you're dashing).</li>
                     <li><strong>Invulnerability:</strong> After taking damage, you're briefly invulnerable (you'll flash).</li>
@@ -72,7 +143,7 @@
             </div>
             
             <div class="tutorial-section">
-                <h2>⌨️ Controls Summary</h2>
+                <h2 id="controlsSummaryTitle">⌨️ Controls Summary</h2>
                 <div class="controls-grid">
                     <div class="control-item">
                         <kbd>W</kbd> / <kbd>↑</kbd> - Move Up
@@ -98,7 +169,7 @@
             <div class="tutorial-footer">
                 <label class="checkbox-label">
                     <input type="checkbox" id="dontShowAgain">
-                    <span>Don't show this tutorial again</span>
+                    <span id="dontShowAgainLabel">Don't show this tutorial again</span>
                 </label>
                 <button id="startGameBtn" class="start-button">Start Game</button>
             </div>

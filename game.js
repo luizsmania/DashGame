@@ -1,3 +1,202 @@
+// Language System
+const translations = {
+    en: {
+        // Menu
+        mainMenu: 'Main Menu',
+        playGame: 'Play Game',
+        stats: 'Stats',
+        achievements: 'Achievements',
+        settings: 'Settings',
+        language: 'Language',
+        selectLanguage: 'Select Language',
+        
+        // Game modes
+        selectGameMode: 'Select Game Mode',
+        endless: 'Endless',
+        endlessDesc: 'Survive as long as possible. Difficulty increases over time.',
+        timeAttack: 'Time Attack',
+        timeAttackDesc: 'Survive for 5 minutes. Beat the clock!',
+        killTarget: 'Kill Target',
+        killTargetDesc: 'Kill 100 monsters as fast as possible.',
+        hardcore: 'Hardcore',
+        hardcoreDesc: 'One hit and you are out. Ultimate challenge!',
+        
+        // Stats
+        totalKills: 'Total Kills',
+        totalPlayTime: 'Total Play Time',
+        highScore: 'High Score',
+        record: 'Record',
+        allTimeTitle: 'All Time Statistics',
+        currentStats: 'Current Session',
+        health: 'Health',
+        kills: 'Kills',
+        score: 'Score',
+        combo: 'Combo',
+        time: 'Time',
+        
+        // Achievements
+        achievementsTitle: 'Achievements',
+        noAchievements: 'No achievements unlocked yet!',
+        unlocked: 'Unlocked',
+        locked: 'Locked',
+        
+        // UI
+        back: 'Back',
+        start: 'Start',
+        restart: 'Restart',
+        resume: 'Resume',
+        paused: 'Paused',
+        gameOver: 'Game Over',
+        finalScore: 'Final Score',
+        totalTime: 'Total Time',
+        
+        // Controls
+        movement: 'Movement',
+        dashAttack: 'Dash Attack',
+        objective: 'Objective',
+        moveInstructions: 'Use WASD or Arrow Keys to move your ninja around the arena.',
+        dashInstructions: 'Left Click anywhere on the screen to dash to that location. Dashing into monsters will defeat them!',
+        objectiveInstructions: 'Survive as long as possible and defeat as many monsters as you can. The game gets harder over time!',
+        
+        // Messages
+        welcomeTitle: 'Welcome to Dash Combat!',
+        howToPlay: 'How to Play',
+        gameMechanics: 'Game Mechanics',
+        controlsSummary: 'Controls Summary',
+        dontShowAgain: "Don't show this tutorial again",
+        pressEscToPause: 'Press ESC to Pause',
+        pressRToRestart: 'Press R to Restart',
+        selectMode: 'Select a game mode to start',
+        
+        // In-game UI
+        dashEnergy: 'Dash Energy',
+        ultimate: 'Ultimate',
+        ultimateReady: 'ULTIMATE READY! (SPACE)',
+        difficulty: 'Difficulty',
+        speedBoost: 'Speed Boost',
+        shield: 'Shield',
+        mode: 'Mode',
+        monstersKilled: 'Monsters Killed',
+        maxCombo: 'Max Combo',
+        survived: 'Survived',
+        pressRRestart: 'Press R to Restart',
+        pressEscMenu: 'Press ESC for Menu',
+        critical: 'CRITICAL!',
+        kill: 'KILL!',
+        comboText: 'x COMBO!',
+        achievementUnlocked: 'Achievement Unlocked!',
+        phase: 'PHASE',
+        tutorialActive: 'Tutorial Active',
+        completeToStart: 'Complete the tutorial to start playing',
+        paused: 'Paused',
+        pressEscResume: 'Press ESC to Resume',
+    },
+    pt: {
+        // Menu
+        mainMenu: 'Menu Principal',
+        playGame: 'Jogar',
+        stats: 'Estatísticas',
+        achievements: 'Conquistas',
+        settings: 'Configurações',
+        language: 'Idioma',
+        selectLanguage: 'Selecione o Idioma',
+        
+        // Game modes
+        selectGameMode: 'Selecione o Modo de Jogo',
+        endless: 'Infinito',
+        endlessDesc: 'Sobreviva o máximo de tempo possível. A dificuldade aumenta com o tempo.',
+        timeAttack: 'Ataque ao Tempo',
+        timeAttackDesc: 'Sobreviva por 5 minutos. Vença o tempo!',
+        killTarget: 'Meta de Mortes',
+        killTargetDesc: 'Mate 100 monstros o mais rápido possível.',
+        hardcore: 'Hardcore',
+        hardcoreDesc: 'Um golpe e você perde. Desafio supremo!',
+        
+        // Stats
+        totalKills: 'Mortes Totais',
+        totalPlayTime: 'Tempo de Jogo Total',
+        highScore: 'Pontuação Máxima',
+        record: 'Recorde',
+        allTimeTitle: 'Estatísticas de Todos os Tempos',
+        currentStats: 'Sessão Atual',
+        health: 'Saúde',
+        kills: 'Mortes',
+        score: 'Pontuação',
+        combo: 'Combo',
+        time: 'Tempo',
+        
+        // Achievements
+        achievementsTitle: 'Conquistas',
+        noAchievements: 'Nenhuma conquista desbloqueada ainda!',
+        unlocked: 'Desbloqueada',
+        locked: 'Bloqueada',
+        
+        // UI
+        back: 'Voltar',
+        start: 'Iniciar',
+        restart: 'Reiniciar',
+        resume: 'Retomar',
+        paused: 'Pausado',
+        gameOver: 'Fim de Jogo',
+        finalScore: 'Pontuação Final',
+        totalTime: 'Tempo Total',
+        
+        // Controls
+        movement: 'Movimento',
+        dashAttack: 'Ataque Dash',
+        objective: 'Objetivo',
+        moveInstructions: 'Use WASD ou Setas para mover seu ninja pela arena.',
+        dashInstructions: 'Clique com o botão esquerdo na tela para fazer dash. Passar pelo inimigo o derrota!',
+        objectiveInstructions: 'Sobreviva o máximo possível e derrote quantos monstros conseguir. O jogo fica mais difícil com o tempo!',
+        
+        // Messages
+        welcomeTitle: 'Bem-vindo ao Dash Combat!',
+        howToPlay: 'Como Jogar',
+        gameMechanics: 'Mecânicas do Jogo',
+        controlsSummary: 'Resumo de Controles',
+        dontShowAgain: 'Não mostrar este tutorial novamente',
+        pressEscToPause: 'Pressione ESC para Pausar',
+        pressRToRestart: 'Pressione R para Reiniciar',
+        selectMode: 'Selecione um modo de jogo para começar',
+        
+        // In-game UI
+        dashEnergy: 'Energia Dash',
+        ultimate: 'Definitivo',
+        ultimateReady: 'DEFINITIVO PRONTO! (ESPAÇO)',
+        difficulty: 'Dificuldade',
+        speedBoost: 'Aceleração',
+        shield: 'Escudo',
+        mode: 'Modo',
+        monstersKilled: 'Monstros Derrotados',
+        maxCombo: 'Combo Máximo',
+        survived: 'Sobreviveu',
+        pressRRestart: 'Pressione R para Reiniciar',
+        pressEscMenu: 'Pressione ESC para Menu',
+        critical: 'CRÍTICO!',
+        kill: 'DERROTA!',
+        comboText: 'x COMBO!',
+        achievementUnlocked: 'Conquista Desbloqueada!',
+        phase: 'FASE',
+        tutorialActive: 'Tutorial Ativo',
+        completeToStart: 'Complete o tutorial para começar a jogar',
+        paused: 'Pausado',
+        pressEscResume: 'Pressione ESC para Retomar',
+    }
+};
+
+// Get current language from localStorage or default to English
+let currentLanguage = localStorage.getItem('gameLanguage') || 'en';
+
+function t(key) {
+    return translations[currentLanguage][key] || translations['en'][key] || key;
+}
+
+function setLanguage(lang) {
+    currentLanguage = lang;
+    localStorage.setItem('gameLanguage', lang);
+    updateUILanguage();
+}
+
 // Canvas setup
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -8,6 +207,10 @@ canvas.height = 800;
 
 // Game state
 const game = {
+    // Menu state
+    currentMenu: 'main', // main, modes, stats, achievements, settings, language
+    menuOpen: false,
+    
     keys: {},
     mouse: { x: 0, y: 0 },
     monsters: [],
@@ -155,16 +358,16 @@ class HitIndicator {
             ctx.textAlign = 'center';
             ctx.strokeStyle = '#000000';
             ctx.lineWidth = 2;
-            ctx.strokeText('CRITICAL!', 0, 0);
-            ctx.fillText('CRITICAL!', 0, 0);
+            ctx.strokeText(t('critical'), 0, 0);
+            ctx.fillText(t('critical'), 0, 0);
         } else if (this.type === 'kill') {
             ctx.fillStyle = '#ff4757';
             ctx.font = 'bold 25px Arial';
             ctx.textAlign = 'center';
             ctx.strokeStyle = '#000000';
             ctx.lineWidth = 2;
-            ctx.strokeText('KILL!', 0, 0);
-            ctx.fillText('KILL!', 0, 0);
+            ctx.strokeText(t('kill'), 0, 0);
+            ctx.fillText(t('kill'), 0, 0);
         } else {
             ctx.fillStyle = '#4a9eff';
             ctx.beginPath();
@@ -248,7 +451,7 @@ class AchievementNotification {
         ctx.fillStyle = '#ffd700';
         ctx.font = 'bold 20px Arial';
         ctx.textAlign = 'left';
-        ctx.fillText('🏆 Achievement Unlocked!', this.x - 330, 45);
+        ctx.fillText('🏆 ' + t('achievementUnlocked'), this.x - 330, 45);
         
         ctx.fillStyle = '#ffffff';
         ctx.font = '16px Arial';
@@ -1390,7 +1593,7 @@ class Boss {
         ctx.fillStyle = '#ffffff';
         ctx.font = 'bold 12px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText(`PHASE ${this.phase}`, 0, -this.radius - 25);
+        ctx.fillText(`${t('phase')} ${this.phase}`, 0, -this.radius - 25);
         
         // Draw eyes (glow in phase 2)
         ctx.fillStyle = this.phase === 2 ? '#ff4757' : '#ffffff';
@@ -1986,13 +2189,17 @@ document.addEventListener('keydown', (e) => {
         if (game.tutorialShown) return;
         
         if (game.gameOver) {
-            // Show mode selection menu
-            const modeSelection = document.getElementById('modeSelection');
-            modeSelection.classList.remove('hidden');
-            game.paused = true;
+            // Show main menu
+            openMainMenu();
         } else {
-            // Toggle pause
-            game.paused = !game.paused;
+            // Toggle pause and show/hide menu
+            if (game.menuOpen) {
+                // Menu is open, close it and resume
+                resumeGame();
+            } else {
+                // Menu is closed, open it and pause
+                openMainMenu();
+            }
         }
     }
     
@@ -2069,7 +2276,7 @@ function drawUI() {
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 14px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(`Dash Energy: ${Math.floor(game.dashEnergy)}/${game.maxDashEnergy}`, energyBarX + energyBarWidth / 2, energyBarY + 35);
+    ctx.fillText(`${t('dashEnergy')}: ${Math.floor(game.dashEnergy)}/${game.maxDashEnergy}`, energyBarX + energyBarWidth / 2, energyBarY + 35);
     
     // Draw ultimate meter
     const ultimateBarWidth = 200;
@@ -2106,16 +2313,16 @@ function drawUI() {
     ctx.fillStyle = game.ultimateReady ? '#ffd700' : '#ffffff';
     ctx.font = 'bold 14px Arial';
     ctx.textAlign = 'center';
-    const ultimateText = game.ultimateReady ? 'ULTIMATE READY! (SPACE)' : `Ultimate: ${Math.floor(game.ultimateMeter)}/${game.maxUltimateMeter}`;
+    const ultimateText = game.ultimateReady ? t('ultimateReady') : `${t('ultimate')}: ${Math.floor(game.ultimateMeter)}/${game.maxUltimateMeter}`;
     ctx.fillText(ultimateText, ultimateBarX + ultimateBarWidth / 2, ultimateBarY + 35);
 
     // Draw stats on left
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 24px Arial';
     ctx.textAlign = 'left';
-    ctx.fillText(`Kills: ${game.kills}`, 20, 40);
-    ctx.fillText(`Score: ${game.score}`, 20, 70);
-    ctx.fillText(`High Score: ${game.highScore}`, 20, 100);
+    ctx.fillText(`${t('kills')}: ${game.kills}`, 20, 40);
+    ctx.fillText(`${t('score')}: ${game.score}`, 20, 70);
+    ctx.fillText(`${t('highScore')}: ${game.highScore}`, 20, 100);
     
     // Draw combo
     if (game.combo > 0) {
@@ -2123,10 +2330,10 @@ function drawUI() {
         ctx.fillStyle = `rgba(255, 215, 0, ${0.7 + Math.sin(Date.now() / 100) * 0.3})`;
         ctx.font = `bold ${comboSize}px Arial`;
         ctx.textAlign = 'center';
-        ctx.fillText(`${game.combo}x COMBO!`, canvas.width / 2, 80);
+        ctx.fillText(`${game.combo}${t('comboText')}`, canvas.width / 2, 80);
         ctx.strokeStyle = '#ffd700';
         ctx.lineWidth = 3;
-        ctx.strokeText(`${game.combo}x COMBO!`, canvas.width / 2, 80);
+        ctx.strokeText(`${game.combo}${t('comboText')}`, canvas.width / 2, 80);
     }
     
     // Draw time and difficulty
@@ -2135,27 +2342,31 @@ function drawUI() {
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 20px Arial';
     ctx.textAlign = 'left';
-    ctx.fillText(`Time: ${minutes}:${seconds.toString().padStart(2, '0')}`, 20, 130);
-    ctx.fillText(`Difficulty: ${game.difficultyMultiplier.toFixed(1)}x`, 20, 160);
+    ctx.fillText(`${t('time')}: ${minutes}:${seconds.toString().padStart(2, '0')}`, 20, 130);
+    ctx.fillText(`${t('difficulty')}: ${game.difficultyMultiplier.toFixed(1)}x`, 20, 160);
     
     // Draw power-up indicators
     if (game.speedBoostActive) {
         ctx.fillStyle = 'rgba(74, 158, 255, 0.8)';
         ctx.font = 'bold 18px Arial';
-        ctx.fillText(`⚡ Speed Boost: ${Math.ceil(game.speedBoostTime / 1000)}s`, 20, 190);
+        ctx.fillText(`⚡ ${t('speedBoost')}: ${Math.ceil(game.speedBoostTime / 1000)}s`, 20, 190);
     }
     
     if (game.shieldActive) {
         ctx.fillStyle = 'rgba(255, 165, 2, 0.8)';
         ctx.font = 'bold 18px Arial';
-        ctx.fillText(`🛡️ Shield: ${Math.ceil(game.shieldTime / 1000)}s`, 20, 220);
+        ctx.fillText(`🛡️ ${t('shield')}: ${Math.ceil(game.shieldTime / 1000)}s`, 20, 220);
     }
     
     // Draw game mode
     ctx.fillStyle = '#aaaaaa';
     ctx.font = '16px Arial';
     ctx.textAlign = 'right';
-    ctx.fillText(`Mode: ${game.gameMode.charAt(0).toUpperCase() + game.gameMode.slice(1)}`, canvas.width - 20, canvas.height - 20);
+    const modeText = game.gameMode === 'endless' ? t('endless') : 
+                     game.gameMode === 'timeAttack' ? t('timeAttack') : 
+                     game.gameMode === 'killTarget' ? t('killTarget') : 
+                     t('hardcore');
+    ctx.fillText(`${t('mode')}: ${modeText}`, canvas.width - 20, canvas.height - 20);
 }
 
 // Draw game over screen
@@ -2166,20 +2377,20 @@ function drawGameOver() {
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 48px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 120);
+    ctx.fillText(t('gameOver'), canvas.width / 2, canvas.height / 2 - 120);
 
     ctx.font = '28px Arial';
-    ctx.fillText(`Monsters Killed: ${game.kills}`, canvas.width / 2, canvas.height / 2 - 70);
-    ctx.fillText(`Score: ${game.score}`, canvas.width / 2, canvas.height / 2 - 40);
-    ctx.fillText(`Max Combo: ${game.maxCombo}x`, canvas.width / 2, canvas.height / 2 - 10);
+    ctx.fillText(`${t('monstersKilled')}: ${game.kills}`, canvas.width / 2, canvas.height / 2 - 70);
+    ctx.fillText(`${t('score')}: ${game.score}`, canvas.width / 2, canvas.height / 2 - 40);
+    ctx.fillText(`${t('maxCombo')}: ${game.maxCombo}x`, canvas.width / 2, canvas.height / 2 - 10);
     const minutes = Math.floor(game.gameTime / 60);
     const seconds = Math.floor(game.gameTime % 60);
-    ctx.fillText(`Survived: ${minutes}:${seconds.toString().padStart(2, '0')}`, canvas.width / 2, canvas.height / 2 + 20);
-    ctx.fillText(`High Score: ${game.highScore}`, canvas.width / 2, canvas.height / 2 + 50);
+    ctx.fillText(`${t('survived')}: ${minutes}:${seconds.toString().padStart(2, '0')}`, canvas.width / 2, canvas.height / 2 + 20);
+    ctx.fillText(`${t('highScore')}: ${game.highScore}`, canvas.width / 2, canvas.height / 2 + 50);
 
     ctx.font = '24px Arial';
-    ctx.fillText('Press R to Restart', canvas.width / 2, canvas.height / 2 + 100);
-    ctx.fillText('Press ESC for Menu', canvas.width / 2, canvas.height / 2 + 130);
+    ctx.fillText(t('pressRRestart'), canvas.width / 2, canvas.height / 2 + 100);
+    ctx.fillText(t('pressEscMenu'), canvas.width / 2, canvas.height / 2 + 130);
 }
 
 // Update difficulty based on time
@@ -2237,9 +2448,9 @@ function gameLoop() {
         ctx.fillStyle = '#ffffff';
         ctx.font = 'bold 36px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText('Tutorial Active', canvas.width / 2, canvas.height / 2);
+        ctx.fillText(t('tutorialActive'), canvas.width / 2, canvas.height / 2);
         ctx.font = '24px Arial';
-        ctx.fillText('Complete the tutorial to start playing', canvas.width / 2, canvas.height / 2 + 40);
+        ctx.fillText(t('completeToStart'), canvas.width / 2, canvas.height / 2 + 40);
         
         requestAnimationFrame(gameLoop);
         return;
@@ -2253,9 +2464,9 @@ function gameLoop() {
         ctx.fillStyle = '#ffffff';
         ctx.font = 'bold 48px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText('PAUSED', canvas.width / 2, canvas.height / 2);
+        ctx.fillText(t('paused'), canvas.width / 2, canvas.height / 2);
         ctx.font = '24px Arial';
-        ctx.fillText('Press ESC to Resume', canvas.width / 2, canvas.height / 2 + 40);
+        ctx.fillText(t('pressEscResume'), canvas.width / 2, canvas.height / 2 + 40);
         
         requestAnimationFrame(gameLoop);
         return;
@@ -2541,6 +2752,201 @@ function restartGame() {
 }
 
 // Tutorial Management
+// Update UI text based on language
+function updateUILanguage() {
+    // Menu titles
+    document.getElementById('menuTitle').textContent = t('mainMenu');
+    document.getElementById('btnPlayGame').textContent = t('playGame');
+    document.getElementById('btnStats').textContent = t('stats');
+    document.getElementById('btnAchievements').textContent = t('achievements');
+    document.getElementById('btnSettings').textContent = t('settings');
+    
+    // Mode selection
+    document.getElementById('modeSelectionTitle').textContent = t('selectGameMode');
+    document.getElementById('mode-endless').textContent = t('endless');
+    document.getElementById('mode-endless-desc').textContent = t('endlessDesc');
+    document.getElementById('mode-timeAttack').textContent = t('timeAttack');
+    document.getElementById('mode-timeAttack-desc').textContent = t('timeAttackDesc');
+    document.getElementById('mode-killTarget').textContent = t('killTarget');
+    document.getElementById('mode-killTarget-desc').textContent = t('killTargetDesc');
+    document.getElementById('mode-hardcore').textContent = t('hardcore');
+    document.getElementById('mode-hardcore-desc').textContent = t('hardcoreDesc');
+    
+    // Stats
+    document.getElementById('statsTitle').textContent = t('stats');
+    document.getElementById('allTimeTitle').textContent = t('allTimeTitle') || 'All Time Statistics';
+    document.getElementById('totalKillsLabel').textContent = t('totalKills') + ':';
+    document.getElementById('totalPlayTimeLabel').textContent = t('totalPlayTime') + ':';
+    document.getElementById('highScoreLabel').textContent = t('highScore') + ':';
+    document.getElementById('recordLabel').textContent = t('record') + ':';
+    
+    // Achievements
+    document.getElementById('achievementsTitle').textContent = t('achievementsTitle');
+    
+    // Settings
+    document.getElementById('settingsTitle').textContent = t('settings');
+    document.getElementById('languageLabel').textContent = t('language') + ':';
+    document.getElementById('langBtn-en').textContent = 'English';
+    document.getElementById('langBtn-pt').textContent = 'Português';
+    
+    // Tutorial
+    document.getElementById('tutorialTitle').textContent = t('welcomeTitle');
+    document.getElementById('howToPlayTitle').textContent = t('howToPlay');
+    document.getElementById('movementLabel').textContent = t('movement') + ':';
+    document.getElementById('dashAttackLabel').textContent = t('dashAttack') + ':';
+    document.getElementById('objectiveLabel').textContent = t('objective') + ':';
+    document.getElementById('movementDesc').innerHTML = t('moveInstructions').replace(/WASD/g, '<kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>').replace(/Arrow Keys/g, '<kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd>');
+    
+    // Update language button states
+    document.querySelectorAll('.lang-button').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.dataset.lang === currentLanguage) {
+            btn.classList.add('active');
+        }
+    });
+}
+
+// Resume game from menu
+function resumeGame() {
+    document.getElementById('mainMenu').classList.add('hidden');
+    document.getElementById('statsScreen').classList.add('hidden');
+    document.getElementById('achievementsScreen').classList.add('hidden');
+    document.getElementById('settingsScreen').classList.add('hidden');
+    game.menuOpen = false;
+    game.paused = false;
+}
+
+// Open main menu
+function openMainMenu() {
+    document.getElementById('mainMenu').classList.remove('hidden');
+    document.getElementById('modeSelection').classList.add('hidden');
+    document.getElementById('statsScreen').classList.add('hidden');
+    document.getElementById('achievementsScreen').classList.add('hidden');
+    document.getElementById('settingsScreen').classList.add('hidden');
+    game.menuOpen = true;
+    game.paused = true;
+    
+    // Show/hide resume button based on whether a game is in progress
+    const resumeBtn = document.getElementById('btnResumeGame');
+    if (resumeBtn) {
+        // Show resume if game was already started (not a fresh start)
+        resumeBtn.style.display = (game.startTime > 0) ? 'block' : 'none';
+    }
+}
+
+// Open stats screen
+function openStatsScreen() {
+    document.getElementById('statsScreen').classList.remove('hidden');
+    document.getElementById('mainMenu').classList.add('hidden');
+    
+    // Update stats
+    const hours = Math.floor(game.totalPlayTime / 3600);
+    const minutes = Math.floor((game.totalPlayTime % 3600) / 60);
+    
+    document.getElementById('totalKillsValue').textContent = game.totalKills;
+    document.getElementById('totalPlayTimeValue').textContent = `${hours}h ${minutes}m`;
+    document.getElementById('highScoreValue').textContent = game.highScore;
+    document.getElementById('recordValue').textContent = game.record;
+}
+
+// Open achievements screen
+function openAchievementsScreen() {
+    document.getElementById('achievementsScreen').classList.remove('hidden');
+    document.getElementById('mainMenu').classList.add('hidden');
+    
+    // Generate achievements list
+    const achievementsList = document.getElementById('achievementsList');
+    achievementsList.innerHTML = '';
+    
+    // Sample achievements to display
+    const sampleAchievements = [
+        { id: 'firstKill', icon: '⚔️', name: 'First Blood', desc: 'Defeat your first monster' },
+        { id: 'killer100', icon: '💀', name: 'Centennial', desc: 'Defeat 100 monsters' },
+        { id: 'survivor', icon: '🛡️', name: 'Survivor', desc: 'Survive for 5 minutes' },
+        { id: 'ultimate', icon: '⚡', name: 'Ultimate Power', desc: 'Use ultimate ability 10 times' },
+    ];
+    
+    sampleAchievements.forEach(ach => {
+        const unlocked = game.achievements.includes(ach.id);
+        const div = document.createElement('div');
+        div.className = `achievement-item ${unlocked ? '' : 'locked'}`;
+        div.innerHTML = `
+            <div class="achievement-icon">${ach.icon}</div>
+            <div class="achievement-name">${ach.name}</div>
+            <div class="achievement-desc">${ach.desc}</div>
+            <div class="achievement-status">${unlocked ? t('unlocked') : t('locked')}</div>
+        `;
+        achievementsList.appendChild(div);
+    });
+}
+
+// Open settings screen
+function openSettingsScreen() {
+    document.getElementById('settingsScreen').classList.remove('hidden');
+    document.getElementById('mainMenu').classList.add('hidden');
+    
+    // Update language button states
+    document.querySelectorAll('.lang-button').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.dataset.lang === currentLanguage) {
+            btn.classList.add('active');
+        }
+    });
+}
+
+// Close all screens and start game mode selection
+function startGameFromMenu() {
+    document.getElementById('mainMenu').classList.add('hidden');
+    document.getElementById('modeSelection').classList.remove('hidden');
+    game.paused = true;
+}
+
+// Initialize menu
+function initMenu() {
+    const mainMenu = document.getElementById('mainMenu');
+    const statsScreen = document.getElementById('statsScreen');
+    const achievementsScreen = document.getElementById('achievementsScreen');
+    const settingsScreen = document.getElementById('settingsScreen');
+    
+    // Add Resume button to main menu (if not already present)
+    let resumeButton = document.getElementById('btnResumeGame');
+    if (!resumeButton) {
+        resumeButton = document.createElement('button');
+        resumeButton.id = 'btnResumeGame';
+        resumeButton.className = 'menu-button';
+        resumeButton.textContent = t('resume');
+        resumeButton.addEventListener('click', resumeGame);
+        resumeButton.style.display = 'none';
+        const menuButtons = document.querySelector('.menu-buttons');
+        menuButtons.insertBefore(resumeButton, menuButtons.firstChild);
+    } else {
+        resumeButton.textContent = t('resume');
+    }
+    
+    // Main menu buttons
+    document.getElementById('btnPlayGame').addEventListener('click', startGameFromMenu);
+    document.getElementById('btnStats').addEventListener('click', openStatsScreen);
+    document.getElementById('btnAchievements').addEventListener('click', openAchievementsScreen);
+    document.getElementById('btnSettings').addEventListener('click', openSettingsScreen);
+    
+    // Back buttons
+    document.getElementById('btnBackToMenu').addEventListener('click', openMainMenu);
+    document.getElementById('btnBackFromStats').addEventListener('click', openMainMenu);
+    document.getElementById('btnBackFromAchievements').addEventListener('click', openMainMenu);
+    document.getElementById('btnBackFromSettings').addEventListener('click', openMainMenu);
+    
+    // Language buttons
+    document.querySelectorAll('.lang-button').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const lang = btn.dataset.lang;
+            setLanguage(lang);
+        });
+    });
+    
+    // Show main menu on start
+    openMainMenu();
+}
+
 function initTutorial() {
     const tutorialOverlay = document.getElementById('tutorialOverlay');
     const modeSelection = document.getElementById('modeSelection');
@@ -2615,6 +3021,8 @@ function loadAchievements() {
 
 // Initialize tutorial on page load
 loadAchievements();
+updateUILanguage();
+initMenu();
 initTutorial();
 
 // Start game
