@@ -229,6 +229,8 @@ const game = {
 
     keys: {},
     joystick: { x: 0, y: 0, active: false, id: null },
+    rightJoystick: { x: 0, y: 0, active: false, id: null, startX: 0, startY: 0 },
+
     scale: 1,
     mouse: { x: 0, y: 0 },
     monsters: [],
@@ -3052,7 +3054,10 @@ function initTouchControls() {
     const joystickZone = document.getElementById('joystick-zone');
     const joystickContainer = document.getElementById('joystick-container');
     const joystickKnob = document.getElementById('joystick-knob');
-    const dashZone = document.getElementById('dash-zone');
+
+    const rightJoystickZone = document.getElementById('joystick-right-zone');
+    const rightJoystickContainer = document.getElementById('joystick-right-container');
+    const rightJoystickKnob = document.getElementById('joystick-right-knob');
 
     // Joystick Logic
     joystickZone.addEventListener('touchstart', (e) => {
@@ -3123,22 +3128,101 @@ function initTouchControls() {
     joystickZone.addEventListener('touchend', endJoystick);
     joystickZone.addEventListener('touchcancel', endJoystick);
 
-    // Dash Logic (Tap on right side)
-    dashZone.addEventListener('touchstart', (e) => {
+    // Right Joystick Logic (Aim & Dash)
+    rightJoystickZone.addEventListener('touchstart', (e) => {
         if (game.paused) return;
         e.preventDefault();
-
-        // Perform dash for the first touch in this zone
         const touch = e.changedTouches[0];
-        const rect = canvas.getBoundingClientRect();
+        game.rightJoystick.id = touch.identifier;
+        game.rightJoystick.active = true;
 
-        // Translate touch to game coordinates
-        // game.scale is calculated in resizeCanvas()
-        const gameX = (touch.clientX - rect.left) / game.scale;
-        const gameY = (touch.clientY - rect.top) / game.scale;
+        rightJoystickContainer.style.display = 'block';
+        rightJoystickContainer.style.left = `${touch.clientX}px`;
+        rightJoystickContainer.style.top = `${touch.clientY}px`;
+        rightJoystickKnob.style.transform = `translate(-50%, -50%)`;
 
-        player.startDash(gameX, gameY);
+        // Use initial touch as center
+        game.rightJoystick.startX = touch.clientX;
+        game.rightJoystick.startY = touch.clientY;
+        game.rightJoystick.x = 0;
+        game.rightJoystick.y = 0;
     }, { passive: false });
+
+    rightJoystickZone.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+        if (!game.rightJoystick.active) return;
+
+        for (let i = 0; i < e.changedTouches.length; i++) {
+            if (e.changedTouches[i].identifier === game.rightJoystick.id) {
+                const touch = e.changedTouches[i];
+                const maxDist = 50;
+                let dx = touch.clientX - game.rightJoystick.startX;
+                let dy = touch.clientY - game.rightJoystick.startY;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist > maxDist) {
+                    const ratio = maxDist / dist;
+                    rightJoystickKnob.style.transform = `translate(calc(-50% + ${dx * ratio}px), calc(-50% + ${dy * ratio}px))`;
+                } else {
+                    rightJoystickKnob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+                }
+
+                // Store aim vector
+                if (dist > 0) {
+                    game.rightJoystick.x = dx;
+                    game.rightJoystick.y = dy;
+                }
+            }
+        }
+    }, { passive: false });
+
+    const endRightJoystick = (e) => {
+        e.preventDefault();
+        for (let i = 0; i < e.changedTouches.length; i++) {
+            if (e.changedTouches[i].identifier === game.rightJoystick.id) {
+                // Trigger Dash on release (if dragged far enough)
+                const dx = game.rightJoystick.x;
+                const dy = game.rightJoystick.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist > 10) { // Minimum drag threshold
+                    // Calculate target relative to player
+                    // Dragging behaves like aiming: standard joystick direction
+                    const aimScale = 5;
+                    const targetX = player.x + dx * aimScale;
+                    const targetY = player.y + dy * aimScale;
+                    player.startDash(targetX, targetY);
+                }
+
+                game.rightJoystick.active = false;
+                game.rightJoystick.id = null;
+                game.rightJoystick.x = 0;
+                game.rightJoystick.y = 0;
+                rightJoystickContainer.style.display = 'none';
+            }
+        }
+    };
+
+    rightJoystickZone.addEventListener('touchend', endRightJoystick);
+    rightJoystickZone.addEventListener('touchcancel', endRightJoystick);
+
+    // Mobile UI Buttons
+    const btnPause = document.getElementById('btnMobilePause');
+    if (btnPause) {
+        btnPause.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            e.stopPropagation(); // Prevent joystick from catching this
+
+            if (game.gameOver) return;
+
+            if (game.menuOpen) {
+                resumeGame();
+            } else {
+                openMainMenu();
+                game.menuOpen = true;
+            }
+        });
+    }
 }
 
 // Initialize tutorial on page load
