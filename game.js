@@ -9,7 +9,7 @@ const translations = {
         settings: 'Settings',
         language: 'Language',
         selectLanguage: 'Select Language',
-        
+
         // Game modes
         selectGameMode: 'Select Game Mode',
         endless: 'Endless',
@@ -20,7 +20,7 @@ const translations = {
         killTargetDesc: 'Kill 100 monsters as fast as possible.',
         hardcore: 'Hardcore',
         hardcoreDesc: 'One hit and you are out. Ultimate challenge!',
-        
+
         // Stats
         totalKills: 'Total Kills',
         totalPlayTime: 'Total Play Time',
@@ -33,13 +33,13 @@ const translations = {
         score: 'Score',
         combo: 'Combo',
         time: 'Time',
-        
+
         // Achievements
         achievementsTitle: 'Achievements',
         noAchievements: 'No achievements unlocked yet!',
         unlocked: 'Unlocked',
         locked: 'Locked',
-        
+
         // UI
         back: 'Back',
         start: 'Start',
@@ -49,7 +49,7 @@ const translations = {
         gameOver: 'Game Over',
         finalScore: 'Final Score',
         totalTime: 'Total Time',
-        
+
         // Controls
         movement: 'Movement',
         dashAttack: 'Dash Attack',
@@ -57,7 +57,7 @@ const translations = {
         moveInstructions: 'Use WASD or Arrow Keys to move your ninja around the arena.',
         dashInstructions: 'Left Click anywhere on the screen to dash to that location. Dashing into monsters will defeat them!',
         objectiveInstructions: 'Survive as long as possible and defeat as many monsters as you can. The game gets harder over time!',
-        
+
         // Messages
         welcomeTitle: 'Welcome to Dash Combat!',
         howToPlay: 'How to Play',
@@ -67,7 +67,7 @@ const translations = {
         pressEscToPause: 'Press ESC to Pause',
         pressRToRestart: 'Press R to Restart',
         selectMode: 'Select a game mode to start',
-        
+
         // In-game UI
         dashEnergy: 'Dash Energy',
         ultimate: 'Ultimate',
@@ -100,7 +100,7 @@ const translations = {
         settings: 'Configurações',
         language: 'Idioma',
         selectLanguage: 'Selecione o Idioma',
-        
+
         // Game modes
         selectGameMode: 'Selecione o Modo de Jogo',
         endless: 'Infinito',
@@ -111,7 +111,7 @@ const translations = {
         killTargetDesc: 'Mate 100 monstros o mais rápido possível.',
         hardcore: 'Hardcore',
         hardcoreDesc: 'Um golpe e você perde. Desafio supremo!',
-        
+
         // Stats
         totalKills: 'Mortes Totais',
         totalPlayTime: 'Tempo de Jogo Total',
@@ -124,13 +124,13 @@ const translations = {
         score: 'Pontuação',
         combo: 'Combo',
         time: 'Tempo',
-        
+
         // Achievements
         achievementsTitle: 'Conquistas',
         noAchievements: 'Nenhuma conquista desbloqueada ainda!',
         unlocked: 'Desbloqueada',
         locked: 'Bloqueada',
-        
+
         // UI
         back: 'Voltar',
         start: 'Iniciar',
@@ -140,7 +140,7 @@ const translations = {
         gameOver: 'Fim de Jogo',
         finalScore: 'Pontuação Final',
         totalTime: 'Tempo Total',
-        
+
         // Controls
         movement: 'Movimento',
         dashAttack: 'Ataque Dash',
@@ -148,7 +148,7 @@ const translations = {
         moveInstructions: 'Use WASD ou Setas para mover seu ninja pela arena.',
         dashInstructions: 'Clique com o botão esquerdo na tela para fazer dash. Passar pelo inimigo o derrota!',
         objectiveInstructions: 'Sobreviva o máximo possível e derrote quantos monstros conseguir. O jogo fica mais difícil com o tempo!',
-        
+
         // Messages
         welcomeTitle: 'Bem-vindo ao Dash Combat!',
         howToPlay: 'Como Jogar',
@@ -158,7 +158,7 @@ const translations = {
         pressEscToPause: 'Pressione ESC para Pausar',
         pressRToRestart: 'Pressione R para Reiniciar',
         selectMode: 'Selecione um modo de jogo para começar',
-        
+
         // In-game UI
         dashEnergy: 'Energia Dash',
         ultimate: 'Definitivo',
@@ -203,15 +203,33 @@ const ctx = canvas.getContext('2d');
 
 // Set canvas size
 canvas.width = 1200;
+// Set canvas size (fixed resolution, scaled via CSS)
+canvas.width = 1200;
 canvas.height = 800;
+
+function resizeCanvas() {
+    const container = document.getElementById('game-container');
+    const scaleX = container.clientWidth / canvas.width;
+    const scaleY = container.clientHeight / canvas.height;
+    game.scale = Math.min(scaleX, scaleY);
+
+    // Canvas is scaled by CSS object-fit: contain, so visual size matches aspect ratio
+    // We just need the scale factor for input coordinate mapping
+}
+
+window.addEventListener('resize', resizeCanvas);
+// Call once on init
+setTimeout(resizeCanvas, 100);
 
 // Game state
 const game = {
     // Menu state
     currentMenu: 'main', // main, modes, stats, achievements, settings, language
     menuOpen: false,
-    
+
     keys: {},
+    joystick: { x: 0, y: 0, active: false, id: null },
+    scale: 1,
     mouse: { x: 0, y: 0 },
     monsters: [],
     bosses: [],
@@ -304,14 +322,14 @@ class DamageNumber {
         this.vy = -2;
         this.size = 20 + Math.min(damage / 10, 10);
     }
-    
+
     update() {
         this.y += this.vy;
         this.vy *= 0.95;
         this.life -= this.decay;
         return this.life > 0;
     }
-    
+
     draw() {
         ctx.save();
         ctx.globalAlpha = this.life;
@@ -337,7 +355,7 @@ class HitIndicator {
         this.scale = 0.5;
         this.maxScale = 1.5;
     }
-    
+
     update() {
         this.life -= this.decay;
         if (this.scale < this.maxScale) {
@@ -345,13 +363,13 @@ class HitIndicator {
         }
         return this.life > 0;
     }
-    
+
     draw() {
         ctx.save();
         ctx.globalAlpha = this.life;
         ctx.translate(this.x, this.y);
         ctx.scale(this.scale, this.scale);
-        
+
         if (this.type === 'critical') {
             ctx.fillStyle = '#ffd700';
             ctx.font = 'bold 30px Arial';
@@ -374,7 +392,7 @@ class HitIndicator {
             ctx.arc(0, 0, 15, 0, Math.PI * 2);
             ctx.fill();
         }
-        
+
         ctx.restore();
     }
 }
@@ -390,7 +408,7 @@ class KillStreakNotification {
         this.scale = 0;
         this.maxScale = 1.2;
     }
-    
+
     update() {
         this.life -= this.decay;
         if (this.scale < this.maxScale && this.life > 0.5) {
@@ -400,7 +418,7 @@ class KillStreakNotification {
         }
         return this.life > 0;
     }
-    
+
     draw() {
         ctx.save();
         ctx.globalAlpha = this.life;
@@ -427,7 +445,7 @@ class AchievementNotification {
         this.x = canvas.width;
         this.targetX = canvas.width - 350;
     }
-    
+
     update() {
         this.life -= this.decay;
         if (this.x > this.targetX) {
@@ -435,29 +453,29 @@ class AchievementNotification {
         }
         return this.life > 0;
     }
-    
+
     draw() {
         ctx.save();
         ctx.globalAlpha = this.life;
-        
+
         // Background
         ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
         ctx.fillRect(this.x - 340, 20, 330, 80);
         ctx.strokeStyle = '#ffd700';
         ctx.lineWidth = 3;
         ctx.strokeRect(this.x - 340, 20, 330, 80);
-        
+
         // Text
         ctx.fillStyle = '#ffd700';
         ctx.font = 'bold 20px Arial';
         ctx.textAlign = 'left';
         ctx.fillText('🏆 ' + t('achievementUnlocked'), this.x - 330, 45);
-        
+
         ctx.fillStyle = '#ffffff';
         ctx.font = '16px Arial';
         ctx.fillText(this.title, this.x - 330, 70);
         ctx.fillText(this.description, this.x - 330, 90);
-        
+
         ctx.restore();
     }
 }
@@ -468,7 +486,7 @@ class SoundSystem {
         this.audioContext = null;
         this.init();
     }
-    
+
     init() {
         try {
             this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -476,60 +494,60 @@ class SoundSystem {
             console.log('Web Audio API not supported');
         }
     }
-    
+
     playTone(frequency, duration, type = 'sine', volume = 0.3) {
         if (!this.audioContext || !game.soundEnabled) return;
-        
+
         const oscillator = this.audioContext.createOscillator();
         const gainNode = this.audioContext.createGain();
-        
+
         oscillator.connect(gainNode);
         gainNode.connect(this.audioContext.destination);
-        
+
         oscillator.frequency.value = frequency;
         oscillator.type = type;
-        
+
         gainNode.gain.setValueAtTime(volume * game.sfxVolume, this.audioContext.currentTime);
         gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + duration);
-        
+
         oscillator.start(this.audioContext.currentTime);
         oscillator.stop(this.audioContext.currentTime + duration);
     }
-    
+
     playDash() {
         this.playTone(400, 0.1, 'sine', 0.2);
     }
-    
+
     playHit() {
         this.playTone(200, 0.15, 'square', 0.3);
     }
-    
+
     playKill() {
         this.playTone(300, 0.1, 'sine', 0.3);
         setTimeout(() => this.playTone(400, 0.1, 'sine', 0.2), 50);
     }
-    
+
     playPowerUp() {
         this.playTone(500, 0.2, 'sine', 0.4);
         setTimeout(() => this.playTone(600, 0.2, 'sine', 0.3), 100);
     }
-    
+
     playBossSpawn() {
         this.playTone(150, 0.3, 'sawtooth', 0.5);
         setTimeout(() => this.playTone(100, 0.3, 'sawtooth', 0.4), 200);
     }
-    
+
     playBossHit() {
         this.playTone(100, 0.2, 'square', 0.4);
     }
-    
+
     playUltimate() {
         this.playTone(200, 0.1, 'sine', 0.5);
         setTimeout(() => this.playTone(300, 0.1, 'sine', 0.4), 50);
         setTimeout(() => this.playTone(400, 0.1, 'sine', 0.3), 100);
         setTimeout(() => this.playTone(500, 0.2, 'sine', 0.5), 150);
     }
-    
+
     playCombo(multiplier) {
         const freq = 400 + (multiplier * 50);
         this.playTone(freq, 0.15, 'sine', 0.3);
@@ -601,13 +619,13 @@ class SwordSlash {
         ctx.globalAlpha = this.life;
         ctx.translate(this.x, this.y);
         ctx.rotate(this.angle);
-        
+
         // Draw sword slash as a bright arc
         const gradient = ctx.createLinearGradient(0, -this.width / 2, 0, this.width / 2);
         gradient.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
         gradient.addColorStop(0.5, 'rgba(100, 200, 255, 0.8)');
         gradient.addColorStop(1, 'rgba(255, 255, 255, 0.9)');
-        
+
         ctx.strokeStyle = gradient;
         ctx.lineWidth = this.width;
         ctx.lineCap = 'round';
@@ -615,12 +633,12 @@ class SwordSlash {
         ctx.moveTo(0, 0);
         ctx.lineTo(this.length, 0);
         ctx.stroke();
-        
+
         // Add glow effect
         ctx.shadowBlur = 15;
         ctx.shadowColor = 'rgba(100, 200, 255, 0.8)';
         ctx.stroke();
-        
+
         ctx.restore();
     }
 }
@@ -638,7 +656,7 @@ class PowerUp {
         this.pulseSpeed = 0.1;
         this.life = 1.0;
         this.decay = 0.001;
-        
+
         this.colors = {
             health: '#ff4757',
             speed: '#4a9eff',
@@ -647,29 +665,29 @@ class PowerUp {
             multiKill: '#ff6348'
         };
     }
-    
+
     update() {
         this.rotation += this.rotationSpeed;
         this.pulse += this.pulseSpeed;
         this.life -= this.decay;
         return this.life > 0;
     }
-    
+
     draw() {
         ctx.save();
         ctx.translate(this.x, this.y);
         ctx.rotate(this.rotation);
-        
+
         const pulseScale = 1 + Math.sin(this.pulse) * 0.2;
         ctx.scale(pulseScale, pulseScale);
-        
+
         const color = this.colors[this.type] || '#ffffff';
-        
+
         // Draw power-up icon based on type
         ctx.fillStyle = color;
         ctx.strokeStyle = '#ffffff';
         ctx.lineWidth = 2;
-        
+
         if (this.type === 'health') {
             // Heart shape
             ctx.beginPath();
@@ -723,7 +741,7 @@ class PowerUp {
             ctx.fill();
             ctx.stroke();
         }
-        
+
         ctx.restore();
     }
 }
@@ -743,19 +761,19 @@ class Projectile {
         this.color = '#ff6b7a';
         this.life = 1.0;
     }
-    
+
     update() {
         this.x += this.vx;
         this.y += this.vy;
-        
+
         // Remove if off screen
-        if (this.x < -50 || this.x > canvas.width + 50 || 
+        if (this.x < -50 || this.x > canvas.width + 50 ||
             this.y < -50 || this.y > canvas.height + 50) {
             return false;
         }
         return true;
     }
-    
+
     draw() {
         ctx.save();
         ctx.fillStyle = this.color;
@@ -778,7 +796,7 @@ class Obstacle {
         this.height = height;
         this.color = '#555';
     }
-    
+
     draw() {
         ctx.save();
         ctx.fillStyle = this.color;
@@ -830,7 +848,7 @@ class Player {
                 // Still far from target, continue dashing
                 const directionX = dx / distance;
                 const directionY = dy / distance;
-                
+
                 this.x += directionX * this.dashSpeed;
                 this.y += directionY * this.dashSpeed;
 
@@ -850,15 +868,25 @@ class Player {
             let dx = 0;
             let dy = 0;
 
+            // Keyboard input
             if (game.keys['w'] || game.keys['ArrowUp']) dy -= 1;
             if (game.keys['s'] || game.keys['ArrowDown']) dy += 1;
             if (game.keys['a'] || game.keys['ArrowLeft']) dx -= 1;
             if (game.keys['d'] || game.keys['ArrowRight']) dx += 1;
 
-            // Normalize diagonal movement
-            if (dx !== 0 && dy !== 0) {
-                dx *= 0.707;
-                dy *= 0.707;
+            // Normalize keyboard movement
+            if (dx !== 0 || dy !== 0) {
+                const length = Math.sqrt(dx * dx + dy * dy);
+                if (length > 0) {
+                    dx /= length;
+                    dy /= length;
+                }
+            }
+
+            // Joystick input (overrides keyboard if active)
+            if (game.joystick.active) {
+                dx = game.joystick.x;
+                dy = game.joystick.y;
             }
 
             this.x += dx * this.speed * game.speedMultiplier;
@@ -893,7 +921,7 @@ class Player {
     startDash(targetX, targetY) {
         // Can't start new dash while already dashing
         if (this.dashing) return;
-        
+
         // Check if player has enough dash energy
         if (game.dashEnergy < game.dashCost) return;
 
@@ -904,10 +932,10 @@ class Player {
         this.dashTarget.x = clampedX;
         this.dashTarget.y = clampedY;
         this.dashing = true;
-        
+
         // Consume dash energy
         game.dashEnergy = Math.max(0, game.dashEnergy - game.dashCost);
-        
+
         // Sound
         soundSystem.playDash();
     }
@@ -966,7 +994,7 @@ class Player {
             if (distance > 0) {
                 const dirX = dx / distance;
                 const dirY = dy / distance;
-                
+
                 // Draw extended arm in dash direction
                 ctx.save();
                 ctx.rotate(Math.atan2(dirY, dirX));
@@ -1003,7 +1031,7 @@ class Player {
         let swordAngle = 0;
         let swordX = 0;
         let swordY = 0;
-        
+
         if (this.dashing) {
             // During dash: sword extends forward in dash direction
             const dx = this.dashTarget.x - this.x;
@@ -1013,7 +1041,7 @@ class Player {
                 const dirX = dx / distance;
                 const dirY = dy / distance;
                 swordAngle = Math.atan2(dirY, dirX);
-                
+
                 // Draw multiple dash trails for motion blur effect
                 for (let i = 0; i < 3; i++) {
                     const trailAlpha = 0.3 - (i * 0.1);
@@ -1034,22 +1062,22 @@ class Player {
             swordX = -8; // Position on back
             swordY = 2;
         }
-        
+
         // Draw sword
         ctx.save();
         ctx.translate(swordX, swordY);
         ctx.rotate(swordAngle);
-        
+
         // Sword blade
         const swordGradient = ctx.createLinearGradient(0, -3, 0, 3);
         swordGradient.addColorStop(0, 'rgba(200, 200, 255, 0.9)');
         swordGradient.addColorStop(0.5, 'rgba(255, 255, 255, 1)');
         swordGradient.addColorStop(1, 'rgba(200, 200, 255, 0.9)');
-        
+
         ctx.fillStyle = swordGradient;
         ctx.strokeStyle = 'rgba(150, 200, 255, 0.8)';
         ctx.lineWidth = 1;
-        
+
         // Draw sword blade (use upgraded length)
         const bladeLength = this.dashing ? game.swordLength + 5 : game.swordLength;
         ctx.beginPath();
@@ -1060,7 +1088,7 @@ class Player {
         ctx.closePath();
         ctx.fill();
         ctx.stroke();
-        
+
         // Sword glow effect (stronger when dashing)
         if (this.dashing) {
             ctx.shadowBlur = 20;
@@ -1070,14 +1098,14 @@ class Player {
             ctx.shadowColor = 'rgba(100, 200, 255, 0.4)';
         }
         ctx.stroke();
-        
+
         // Sword handle
         ctx.fillStyle = `rgba(60, 40, 20, ${alpha})`;
         ctx.beginPath();
         ctx.rect(0, -2, 8, 4);
         ctx.fill();
         ctx.stroke();
-        
+
         ctx.restore();
 
         ctx.restore();
@@ -1092,7 +1120,7 @@ class Monster {
         this.type = type; // 'normal', 'fast', 'tank', 'splitter', 'exploder', 'ranged'
         this.lastShotTime = 0;
         this.shootInterval = 2000; // For ranged enemies
-        
+
         // Set properties based on type
         if (type === 'fast') {
             this.radius = 18;
@@ -1126,7 +1154,7 @@ class Monster {
             this.color = '#ff4757';
             this.health = 1;
         }
-        
+
         this.maxHealth = this.health;
         this.speed = this.baseSpeed * game.difficultyMultiplier;
         this.vibrating = false;
@@ -1152,25 +1180,25 @@ class Monster {
     update() {
         if (this.dead) {
             this.deathTime += 16;
-            
+
             // Split animation
             if (!this.exploded && this.deathTime < 300) {
                 // Split the monster in half
                 const splitSpeed = 3;
                 const rotationSpeed = 0.1;
-                
+
                 // Calculate split direction (perpendicular to slash)
                 const splitDirX = Math.cos(this.splitAngle + Math.PI / 2);
                 const splitDirY = Math.sin(this.splitAngle + Math.PI / 2);
-                
+
                 this.half1Offset.x += splitDirX * splitSpeed;
                 this.half1Offset.y += splitDirY * splitSpeed;
                 this.half2Offset.x -= splitDirX * splitSpeed;
                 this.half2Offset.y -= splitDirY * splitSpeed;
-                
+
                 this.half1Rotation += rotationSpeed;
                 this.half2Rotation -= rotationSpeed;
-                
+
                 // Fade out
                 this.radius = Math.max(0, this.radius - 0.3);
             } else if (!this.exploded) {
@@ -1178,12 +1206,12 @@ class Monster {
                 this.explode();
                 this.exploded = true;
             }
-            
+
             // Continue fading after explosion
             if (this.exploded) {
                 this.radius = Math.max(0, this.radius - 0.5);
             }
-            
+
             return;
         }
 
@@ -1194,12 +1222,12 @@ class Monster {
         // Calculate player velocity
         const playerDx = player.x - this.lastPlayerX;
         const playerDy = player.y - this.lastPlayerY;
-        
+
         // Update velocity estimate (smoothed, more responsive at higher difficulty)
         const smoothing = Math.max(0.5, 1.0 - game.difficultyMultiplier * 0.1);
         this.playerVelocity.x = this.playerVelocity.x * smoothing + playerDx * (1 - smoothing);
         this.playerVelocity.y = this.playerVelocity.y * smoothing + playerDy * (1 - smoothing);
-        
+
         this.lastPlayerX = player.x;
         this.lastPlayerY = player.y;
 
@@ -1218,14 +1246,14 @@ class Monster {
         const dx = targetX - this.x;
         const dy = targetY - this.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
-        
+
         if (distance > 0) {
             this.direction = { x: dx / distance, y: dy / distance };
         }
-        
+
         this.x += this.direction.x * this.speed;
         this.y += this.direction.y * this.speed;
-        
+
         // Ranged enemies shoot projectiles
         if (this.type === 'ranged' && !this.dead) {
             const now = Date.now();
@@ -1256,7 +1284,7 @@ class Monster {
         this.vibrating = true;
         this.vibrationTime = 0;
     }
-    
+
     triggerDeath(slashAngle) {
         this.dead = true;
         this.deathTime = 0;
@@ -1267,7 +1295,7 @@ class Monster {
         this.half2Rotation = 0;
         this.exploded = false;
     }
-    
+
     explode() {
         // Handle splitter type - spawn smaller enemies
         if (this.type === 'splitter') {
@@ -1281,7 +1309,7 @@ class Monster {
                 game.monsters.push(smallMonster);
             }
         }
-        
+
         // Handle exploder type - damage nearby enemies
         if (this.type === 'exploder') {
             const explosionRadius = 80;
@@ -1303,7 +1331,7 @@ class Monster {
                 }
             });
         }
-        
+
         // Create explosion particles
         const particleCount = this.type === 'exploder' ? 25 : 15;
         for (let i = 0; i < particleCount; i++) {
@@ -1336,12 +1364,12 @@ class Monster {
         if (this.dead && this.radius <= 0 && this.exploded) return;
 
         ctx.save();
-        
+
         if (this.dead && !this.exploded) {
             // Draw split monster halves
             const alpha = Math.max(0, 1 - this.deathTime / 300);
             ctx.globalAlpha = alpha;
-            
+
             // Draw first half
             ctx.save();
             ctx.translate(this.x + this.half1Offset.x, this.y + this.half1Offset.y);
@@ -1356,7 +1384,7 @@ class Monster {
             ctx.lineWidth = 2;
             ctx.stroke();
             ctx.restore();
-            
+
             // Draw second half
             ctx.save();
             ctx.translate(this.x + this.half2Offset.x, this.y + this.half2Offset.y);
@@ -1371,7 +1399,7 @@ class Monster {
             ctx.lineWidth = 2;
             ctx.stroke();
             ctx.restore();
-            
+
             ctx.globalAlpha = 1;
         } else {
             // Draw normal monster
@@ -1426,10 +1454,10 @@ class Boss {
         this.charging = false;
         this.chargeTime = 0;
     }
-    
+
     update() {
         if (this.dead) return;
-        
+
         // Update phase based on health
         if (this.health <= this.maxHealth * 0.5 && this.phase === 1) {
             this.phase = 2;
@@ -1445,7 +1473,7 @@ class Boss {
             }
             soundSystem.playBossSpawn();
         }
-        
+
         // Calculate player velocity
         const playerDx = player.x - this.lastPlayerX;
         const playerDy = player.y - this.lastPlayerY;
@@ -1453,32 +1481,32 @@ class Boss {
         this.playerVelocity.y = this.playerVelocity.y * 0.7 + playerDy * 0.3;
         this.lastPlayerX = player.x;
         this.lastPlayerY = player.y;
-        
+
         const dx = player.x - this.x;
         const dy = player.y - this.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
-        
+
         // Enhanced attack patterns
         const now = Date.now();
         this.attackCooldown -= 16;
-        
+
         if (this.attackCooldown <= 0) {
             this.attackPattern = (this.attackPattern + 1) % 3;
             this.attackCooldown = 3000; // 3 seconds between pattern changes
         }
-        
+
         // Pattern 0: Normal movement and shooting
         if (this.attackPattern === 0) {
             if (distance > 0) {
                 this.x += (dx / distance) * this.speed;
                 this.y += (dy / distance) * this.speed;
             }
-            
+
             if (now - this.lastShotTime > this.shootInterval && distance < 500) {
                 const count = this.phase === 2 ? 3 : 1;
                 for (let i = 0; i < count; i++) {
-                    const angle = i === 0 ? Math.atan2(dy, dx) : 
-                                 Math.atan2(dy, dx) + (i - 1) * 0.5 - 0.5;
+                    const angle = i === 0 ? Math.atan2(dy, dx) :
+                        Math.atan2(dy, dx) + (i - 1) * 0.5 - 0.5;
                     const targetX = player.x + Math.cos(angle) * 200;
                     const targetY = player.y + Math.sin(angle) * 200;
                     game.projectiles.push(new Projectile(this.x, this.y, targetX, targetY, 3));
@@ -1498,7 +1526,7 @@ class Boss {
                 this.charging = true;
                 this.chargeTime = 0;
             }
-            
+
             if (this.charging) {
                 this.chargeTime += 16;
                 if (this.chargeTime < 500) {
@@ -1533,7 +1561,7 @@ class Boss {
                 this.x += (dx / distance) * this.speed;
                 this.y += (dy / distance) * this.speed;
             }
-            
+
             // Burst attack
             if (now - this.lastShotTime > this.shootInterval * 2) {
                 const burstCount = this.phase === 2 ? 12 : 8;
@@ -1547,17 +1575,17 @@ class Boss {
             }
         }
     }
-    
+
     draw() {
         ctx.save();
         ctx.translate(this.x, this.y);
-        
+
         // Phase 2 glow effect
         if (this.phase === 2) {
             ctx.shadowBlur = 20;
             ctx.shadowColor = '#ff4757';
         }
-        
+
         // Charge indicator
         if (this.charging && this.chargeTime < 500) {
             const pulse = Math.sin(this.chargeTime / 50) * 0.3 + 0.7;
@@ -1569,7 +1597,7 @@ class Boss {
             ctx.stroke();
             ctx.globalAlpha = 1;
         }
-        
+
         // Draw boss body
         ctx.beginPath();
         ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
@@ -1578,7 +1606,7 @@ class Boss {
         ctx.strokeStyle = '#ffffff';
         ctx.lineWidth = 3;
         ctx.stroke();
-        
+
         // Draw health bar
         const barWidth = this.radius * 2;
         const barHeight = 8;
@@ -1588,13 +1616,13 @@ class Boss {
         ctx.fillRect(-barWidth / 2, -this.radius - 20, barWidth * (this.health / this.maxHealth), barHeight);
         ctx.strokeStyle = '#fff';
         ctx.strokeRect(-barWidth / 2, -this.radius - 20, barWidth, barHeight);
-        
+
         // Phase indicator
         ctx.fillStyle = '#ffffff';
         ctx.font = 'bold 12px Arial';
         ctx.textAlign = 'center';
         ctx.fillText(`${t('phase')} ${this.phase}`, 0, -this.radius - 25);
-        
+
         // Draw eyes (glow in phase 2)
         ctx.fillStyle = this.phase === 2 ? '#ff4757' : '#ffffff';
         ctx.shadowBlur = this.phase === 2 ? 10 : 0;
@@ -1604,10 +1632,10 @@ class Boss {
         ctx.beginPath();
         ctx.arc(15, -10, 8, 0, Math.PI * 2);
         ctx.fill();
-        
+
         ctx.restore();
     }
-    
+
     takeDamage() {
         this.health--;
         if (this.health <= 0) {
@@ -1669,7 +1697,7 @@ const achievements = {
 
 function checkAchievements() {
     const unlocked = [];
-    
+
     // Check each achievement
     if (game.kills >= 1 && !achievements.firstKill.unlocked) {
         achievements.firstKill.unlocked = true;
@@ -1699,7 +1727,7 @@ function checkAchievements() {
         achievements.survive5min.unlocked = true;
         unlocked.push(achievements.survive5min);
     }
-    
+
     // Show notifications for unlocked achievements
     unlocked.forEach(achievement => {
         game.achievementNotifications.push(new AchievementNotification(achievement.title, achievement.description));
@@ -1712,21 +1740,21 @@ function addScore(points) {
     const comboMultiplier = 1 + (game.combo * 0.1);
     const finalPoints = Math.floor(points * comboMultiplier);
     game.score += finalPoints;
-    
+
     // Update combo
     game.combo++;
     game.comboTime = game.comboTimeout;
     if (game.combo > game.maxCombo) {
         game.maxCombo = game.combo;
     }
-    
+
     // Update ultimate meter (gain 2% per kill)
     game.ultimateMeter = Math.min(game.maxUltimateMeter, game.ultimateMeter + 2);
     if (game.ultimateMeter >= game.maxUltimateMeter && !game.ultimateReady) {
         game.ultimateReady = true;
         soundSystem.playPowerUp();
     }
-    
+
     // Check kill streak notifications
     if (game.combo === 2) {
         game.killStreakNotifications.push(new KillStreakNotification('DOUBLE KILL!', '#4a9eff'));
@@ -1744,10 +1772,10 @@ function addScore(points) {
         game.killStreakNotifications.push(new KillStreakNotification('UNSTOPPABLE!', '#ff6348'));
         soundSystem.playCombo(20);
     }
-    
+
     // Check achievements
     checkAchievements();
-    
+
     // Update high score
     if (game.score > game.highScore) {
         game.highScore = game.score;
@@ -1768,13 +1796,13 @@ function updateCombo() {
 // Ultimate ability functions
 function activateUltimate() {
     if (!game.ultimateReady || game.ultimateActive) return;
-    
+
     game.ultimateActive = true;
     game.ultimateReady = false;
     game.ultimateMeter = 0;
     game.ultimateTime = 0;
     soundSystem.playUltimate();
-    
+
     if (game.ultimateType === 'areaDash') {
         // Area dash - dash through all enemies in range
         const dashRadius = 200;
@@ -1847,7 +1875,7 @@ function activateUltimate() {
         // Visual effect - player glow
         game.killStreakNotifications.push(new KillStreakNotification('DAMAGE BOOST ACTIVATED!', '#ff4757'));
     }
-    
+
     // Unlock achievement
     if (!achievements.ultimateUse.unlocked) {
         achievements.ultimateUse.unlocked = true;
@@ -1900,14 +1928,14 @@ function applyPowerUp(powerUp) {
 function spawnBoss() {
     const side = Math.floor(Math.random() * 4);
     let x, y;
-    
+
     switch (side) {
         case 0: x = canvas.width / 2; y = -100; break;
         case 1: x = canvas.width + 100; y = canvas.height / 2; break;
         case 2: x = canvas.width / 2; y = canvas.height + 100; break;
         case 3: x = -100; y = canvas.height / 2; break;
     }
-    
+
     game.bosses.push(new Boss(x, y));
     triggerScreenShake(10);
     soundSystem.playBossSpawn();
@@ -1942,7 +1970,7 @@ function spawnMonster(type = null) {
     if (!type) {
         const rand = Math.random();
         const difficulty = game.difficultyMultiplier;
-        
+
         if (difficulty > 3 && rand < 0.15) {
             type = 'ranged';
         } else if (difficulty > 2 && rand < 0.2) {
@@ -1980,38 +2008,38 @@ function checkCollisions() {
                     const dashDx = player.dashTarget.x - player.x;
                     const dashDy = player.dashTarget.y - player.y;
                     const dashDistance = Math.sqrt(dashDx * dashDx + dashDy * dashDy);
-                    
+
                     if (dashDistance > 0) {
                         // Slash angle is perpendicular to dash direction
                         const dashAngle = Math.atan2(dashDy, dashDx);
                         const slashAngle = dashAngle + Math.PI / 2;
-                        
+
                         // Create sword slash effect at monster position
                         const slash = new SwordSlash(monster.x, monster.y, slashAngle, 80);
                         game.swordSlashes.push(slash);
-                        
+
                         // Trigger death animation
                         monster.triggerDeath(slashAngle);
                         monster.hasBeenKilled = true;
-                        
+
                         player.triggerVibration();
                         game.kills++;
                         game.totalKills++;
                         addScore(10);
                         triggerScreenShake(3);
-                        
+
                         // Visual feedback
                         game.damageNumbers.push(new DamageNumber(monster.x, monster.y - 20, 10, '#4a9eff'));
                         game.hitIndicators.push(new HitIndicator(monster.x, monster.y, 'kill'));
-                        
+
                         // Sound
                         soundSystem.playKill();
-                        
+
                         // Random chance to spawn power-up
                         if (Math.random() < 0.15) {
                             spawnPowerUp(monster.x, monster.y);
                         }
-                        
+
                         // Update record if needed
                         if (game.kills > game.record) {
                             game.record = game.kills;
@@ -2032,11 +2060,11 @@ function checkCollisions() {
                 player.triggerVibration();
                 triggerScreenShake(8);
                 game.combo = 0; // Reset combo on damage
-                
+
                 // Visual and audio feedback
                 soundSystem.playHit();
                 game.hitIndicators.push(new HitIndicator(player.x, player.y - 30, 'hit'));
-                
+
                 if (game.health <= 0) {
                     game.gameOver = true;
                     // Save total play time
@@ -2047,16 +2075,16 @@ function checkCollisions() {
             }
         }
     }
-    
+
     // Check boss collisions
     for (let i = game.bosses.length - 1; i >= 0; i--) {
         const boss = game.bosses[i];
         if (boss.dead) continue;
-        
+
         const dx = player.x - boss.x;
         const dy = player.y - boss.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
-        
+
         if (distance < player.radius + boss.radius) {
             if (player.dashing) {
                 boss.takeDamage();
@@ -2074,21 +2102,21 @@ function checkCollisions() {
                 player.triggerVibration();
                 triggerScreenShake(10);
                 game.combo = 0;
-                
+
                 if (game.health <= 0) {
                     game.gameOver = true;
                 }
             }
         }
     }
-    
+
     // Check power-up collisions
     for (let i = game.powerUps.length - 1; i >= 0; i--) {
         const powerUp = game.powerUps[i];
         const dx = player.x - powerUp.x;
         const dy = player.y - powerUp.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
-        
+
         if (distance < player.radius + powerUp.radius) {
             applyPowerUp(powerUp);
             game.powerUps.splice(i, 1);
@@ -2096,14 +2124,14 @@ function checkCollisions() {
             game.hitIndicators.push(new HitIndicator(powerUp.x, powerUp.y, 'hit'));
         }
     }
-    
+
     // Check obstacle collisions
     for (let i = game.obstacles.length - 1; i >= 0; i--) {
         const obstacle = game.obstacles[i];
         const dx = player.x - obstacle.x;
         const dy = player.y - obstacle.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
-        
+
         if (distance < player.radius + Math.max(obstacle.width, obstacle.height) / 2) {
             if (!game.invulnerable && !game.shieldActive && !player.dashing) {
                 game.health--;
@@ -2112,21 +2140,21 @@ function checkCollisions() {
                 player.triggerVibration();
                 triggerScreenShake(5);
                 game.combo = 0;
-                
+
                 if (game.health <= 0) {
                     game.gameOver = true;
                 }
             }
         }
     }
-    
+
     // Check projectile collisions with player
     for (let i = game.projectiles.length - 1; i >= 0; i--) {
         const projectile = game.projectiles[i];
         const dx = player.x - projectile.x;
         const dy = player.y - projectile.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
-        
+
         if (distance < player.radius + projectile.radius) {
             if (!game.invulnerable && !game.shieldActive && !player.dashing) {
                 game.health--;
@@ -2136,7 +2164,7 @@ function checkCollisions() {
                 triggerScreenShake(5);
                 game.combo = 0;
                 game.projectiles.splice(i, 1);
-                
+
                 if (game.health <= 0) {
                     game.gameOver = true;
                 }
@@ -2169,7 +2197,7 @@ canvas.addEventListener('mousemove', (e) => {
 canvas.addEventListener('click', (e) => {
     // Don't allow dashing during tutorial
     if (game.paused) return;
-    
+
     if (e.button === 0 || !e.button) { // Left mouse button (or no button for click event)
         const rect = canvas.getBoundingClientRect();
         const mouseX = e.clientX - rect.left;
@@ -2183,11 +2211,11 @@ document.addEventListener('keydown', (e) => {
     if (e.key.toLowerCase() === 'r' && game.gameOver && !game.paused) {
         restartGame();
     }
-    
+
     if (e.key === 'Escape') {
         // Don't allow pause during tutorial
         if (game.tutorialShown) return;
-        
+
         if (game.gameOver) {
             // Show main menu
             openMainMenu();
@@ -2202,7 +2230,7 @@ document.addEventListener('keydown', (e) => {
             }
         }
     }
-    
+
     // Ultimate ability on Space
     if (e.key === ' ' && !game.paused && !game.gameOver) {
         e.preventDefault();
@@ -2215,11 +2243,11 @@ function drawHeart(ctx, x, y, size, fillColor, strokeColor) {
     ctx.save();
     ctx.translate(x, y);
     ctx.scale(size / 20, size / 20); // Scale to desired size
-    
+
     ctx.fillStyle = fillColor;
     ctx.strokeStyle = strokeColor;
     ctx.lineWidth = 0.5;
-    
+
     ctx.beginPath();
     // Left curve
     ctx.moveTo(0, 5);
@@ -2229,7 +2257,7 @@ function drawHeart(ctx, x, y, size, fillColor, strokeColor) {
     ctx.bezierCurveTo(5, 10, 10, 5, 10, 0);
     ctx.bezierCurveTo(10, -5, 5, -5, 0, 5);
     ctx.closePath();
-    
+
     ctx.fill();
     ctx.stroke();
     ctx.restore();
@@ -2248,17 +2276,17 @@ function drawUI() {
         const strokeColor = i < game.health ? '#ff6b7a' : '#666';
         drawHeart(ctx, startX + i * heartSpacing, y, heartSize, fillColor, strokeColor);
     }
-    
+
     // Draw dash energy bar
     const energyBarWidth = 200;
     const energyBarHeight = 20;
     const energyBarX = canvas.width - energyBarWidth - 20;
     const energyBarY = 20;
-    
+
     // Background
     ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
     ctx.fillRect(energyBarX, energyBarY, energyBarWidth, energyBarHeight);
-    
+
     // Energy fill
     const energyPercent = game.dashEnergy / game.maxDashEnergy;
     const gradient = ctx.createLinearGradient(energyBarX, energyBarY, energyBarX + energyBarWidth, energyBarY);
@@ -2266,28 +2294,28 @@ function drawUI() {
     gradient.addColorStop(1, '#4a9eff');
     ctx.fillStyle = gradient;
     ctx.fillRect(energyBarX, energyBarY, energyBarWidth * energyPercent, energyBarHeight);
-    
+
     // Border
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = 2;
     ctx.strokeRect(energyBarX, energyBarY, energyBarWidth, energyBarHeight);
-    
+
     // Energy text
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 14px Arial';
     ctx.textAlign = 'center';
     ctx.fillText(`${t('dashEnergy')}: ${Math.floor(game.dashEnergy)}/${game.maxDashEnergy}`, energyBarX + energyBarWidth / 2, energyBarY + 35);
-    
+
     // Draw ultimate meter
     const ultimateBarWidth = 200;
     const ultimateBarHeight = 20;
     const ultimateBarX = canvas.width - ultimateBarWidth - 20;
     const ultimateBarY = 70;
-    
+
     // Background
     ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
     ctx.fillRect(ultimateBarX, ultimateBarY, ultimateBarWidth, ultimateBarHeight);
-    
+
     // Ultimate fill
     const ultimatePercent = game.ultimateMeter / game.maxUltimateMeter;
     const ultimateGradient = ctx.createLinearGradient(ultimateBarX, ultimateBarY, ultimateBarX + ultimateBarWidth, ultimateBarY);
@@ -2295,7 +2323,7 @@ function drawUI() {
     ultimateGradient.addColorStop(1, '#ffd700');
     ctx.fillStyle = ultimateGradient;
     ctx.fillRect(ultimateBarX, ultimateBarY, ultimateBarWidth * ultimatePercent, ultimateBarHeight);
-    
+
     // Glow effect when ready
     if (game.ultimateReady) {
         ctx.shadowBlur = 15;
@@ -2303,12 +2331,12 @@ function drawUI() {
         ctx.fillRect(ultimateBarX, ultimateBarY, ultimateBarWidth, ultimateBarHeight);
         ctx.shadowBlur = 0;
     }
-    
+
     // Border
     ctx.strokeStyle = game.ultimateReady ? '#ffd700' : '#ffffff';
     ctx.lineWidth = game.ultimateReady ? 3 : 2;
     ctx.strokeRect(ultimateBarX, ultimateBarY, ultimateBarWidth, ultimateBarHeight);
-    
+
     // Ultimate text
     ctx.fillStyle = game.ultimateReady ? '#ffd700' : '#ffffff';
     ctx.font = 'bold 14px Arial';
@@ -2323,7 +2351,7 @@ function drawUI() {
     ctx.fillText(`${t('kills')}: ${game.kills}`, 20, 40);
     ctx.fillText(`${t('score')}: ${game.score}`, 20, 70);
     ctx.fillText(`${t('highScore')}: ${game.highScore}`, 20, 100);
-    
+
     // Draw combo
     if (game.combo > 0) {
         const comboSize = 32 + Math.min(game.combo * 2, 20);
@@ -2335,7 +2363,7 @@ function drawUI() {
         ctx.lineWidth = 3;
         ctx.strokeText(`${game.combo}${t('comboText')}`, canvas.width / 2, 80);
     }
-    
+
     // Draw time and difficulty
     const minutes = Math.floor(game.gameTime / 60);
     const seconds = Math.floor(game.gameTime % 60);
@@ -2344,28 +2372,28 @@ function drawUI() {
     ctx.textAlign = 'left';
     ctx.fillText(`${t('time')}: ${minutes}:${seconds.toString().padStart(2, '0')}`, 20, 130);
     ctx.fillText(`${t('difficulty')}: ${game.difficultyMultiplier.toFixed(1)}x`, 20, 160);
-    
+
     // Draw power-up indicators
     if (game.speedBoostActive) {
         ctx.fillStyle = 'rgba(74, 158, 255, 0.8)';
         ctx.font = 'bold 18px Arial';
         ctx.fillText(`⚡ ${t('speedBoost')}: ${Math.ceil(game.speedBoostTime / 1000)}s`, 20, 190);
     }
-    
+
     if (game.shieldActive) {
         ctx.fillStyle = 'rgba(255, 165, 2, 0.8)';
         ctx.font = 'bold 18px Arial';
         ctx.fillText(`🛡️ ${t('shield')}: ${Math.ceil(game.shieldTime / 1000)}s`, 20, 220);
     }
-    
+
     // Draw game mode
     ctx.fillStyle = '#aaaaaa';
     ctx.font = '16px Arial';
     ctx.textAlign = 'right';
-    const modeText = game.gameMode === 'endless' ? t('endless') : 
-                     game.gameMode === 'timeAttack' ? t('timeAttack') : 
-                     game.gameMode === 'killTarget' ? t('killTarget') : 
-                     t('hardcore');
+    const modeText = game.gameMode === 'endless' ? t('endless') :
+        game.gameMode === 'timeAttack' ? t('timeAttack') :
+            game.gameMode === 'killTarget' ? t('killTarget') :
+                t('hardcore');
     ctx.fillText(`${t('mode')}: ${modeText}`, canvas.width - 20, canvas.height - 20);
 }
 
@@ -2441,7 +2469,7 @@ function gameLoop() {
         // Still draw the player and monsters in their current state
         game.monsters.forEach(monster => monster.draw());
         player.draw();
-        
+
         // Draw pause message only if tutorial is actually showing
         ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -2451,11 +2479,11 @@ function gameLoop() {
         ctx.fillText(t('tutorialActive'), canvas.width / 2, canvas.height / 2);
         ctx.font = '24px Arial';
         ctx.fillText(t('completeToStart'), canvas.width / 2, canvas.height / 2 + 40);
-        
+
         requestAnimationFrame(gameLoop);
         return;
     }
-    
+
     // Handle regular pause (ESC key)
     if (game.paused && !game.tutorialShown && !game.gameOver) {
         // Draw pause overlay
@@ -2467,7 +2495,7 @@ function gameLoop() {
         ctx.fillText(t('paused'), canvas.width / 2, canvas.height / 2);
         ctx.font = '24px Arial';
         ctx.fillText(t('pressEscResume'), canvas.width / 2, canvas.height / 2 + 40);
-        
+
         requestAnimationFrame(gameLoop);
         return;
     }
@@ -2475,7 +2503,7 @@ function gameLoop() {
     if (!game.gameOver) {
         // Update difficulty
         updateDifficulty();
-        
+
         // Check game mode win conditions
         if (game.gameMode === 'timeAttack' && game.gameTime >= game.gameModeTarget) {
             game.gameOver = true;
@@ -2484,13 +2512,13 @@ function gameLoop() {
             game.gameOver = true;
             // Victory!
         }
-        
+
         // Weapon upgrades based on kills
         if (game.kills > 0 && game.kills % 25 === 0 && game.swordLength < game.baseSwordLength * 2) {
             game.swordLength += 5;
             game.damageMultiplier += 0.1;
         }
-        
+
         // Spawn obstacles periodically
         if (game.difficultyMultiplier > 2 && Math.random() < 0.001) {
             const side = Math.floor(Math.random() * 4);
@@ -2503,7 +2531,7 @@ function gameLoop() {
             }
             game.obstacles.push(new Obstacle(x, y, 40, 40));
         }
-        
+
         // Update obstacles (move them)
         game.obstacles.forEach(obstacle => {
             const dx = player.x - obstacle.x;
@@ -2515,12 +2543,12 @@ function gameLoop() {
                 obstacle.y += (dy / distance) * speed;
             }
         });
-        
+
         // Update dash energy regeneration
         if (game.dashEnergy < game.maxDashEnergy) {
             game.dashEnergy = Math.min(game.maxDashEnergy, game.dashEnergy + game.dashEnergyRegen);
         }
-        
+
         // Update power-up timers
         if (game.speedBoostActive) {
             game.speedBoostTime -= 16;
@@ -2529,29 +2557,29 @@ function gameLoop() {
                 game.speedMultiplier = 1.0;
             }
         }
-        
+
         if (game.shieldActive) {
             game.shieldTime -= 16;
             if (game.shieldTime <= 0) {
                 game.shieldActive = false;
             }
         }
-        
+
         // Update combo timer
         updateCombo();
-        
+
         // Update ultimate
         updateUltimate();
-        
+
         // Update visual feedback systems
         game.damageNumbers = game.damageNumbers.filter(num => num.update());
         game.hitIndicators = game.hitIndicators.filter(ind => ind.update());
         game.killStreakNotifications = game.killStreakNotifications.filter(notif => notif.update());
         game.achievementNotifications = game.achievementNotifications.filter(notif => notif.update());
-        
+
         // Update screen shake
         updateScreenShake();
-        
+
         // Apply screen shake offset
         ctx.save();
         ctx.translate(game.screenShake.x, game.screenShake.y);
@@ -2566,7 +2594,7 @@ function gameLoop() {
             }
             game.lastSpawn = now;
         }
-        
+
         // Spawn boss periodically
         if (game.kills > 0 && game.kills % 50 === 0 && now - game.lastBossSpawn > 10000) {
             spawnBoss();
@@ -2578,13 +2606,13 @@ function gameLoop() {
 
         // Update monsters
         game.monsters.forEach(monster => monster.update());
-        
+
         // Update bosses
         game.bosses.forEach(boss => boss.update());
-        
+
         // Update projectiles
         game.projectiles = game.projectiles.filter(projectile => projectile.update());
-        
+
         // Update power-ups
         game.powerUps = game.powerUps.filter(powerUp => powerUp.update());
 
@@ -2606,7 +2634,7 @@ function gameLoop() {
             if (!monster.exploded) return true;
             return monster.radius > 0;
         });
-        
+
         // Remove dead bosses
         game.bosses = game.bosses.filter(boss => !boss.dead);
 
@@ -2616,25 +2644,25 @@ function gameLoop() {
         // Draw everything (order matters for visual layering)
         // Draw obstacles
         game.obstacles.forEach(obstacle => obstacle.draw());
-        
+
         // Draw sword slashes first (behind monsters)
         game.swordSlashes.forEach(slash => slash.draw());
-        
+
         // Draw monsters
         game.monsters.forEach(monster => monster.draw());
-        
+
         // Draw bosses
         game.bosses.forEach(boss => boss.draw());
-        
+
         // Draw projectiles
         game.projectiles.forEach(projectile => projectile.draw());
-        
+
         // Draw power-ups
         game.powerUps.forEach(powerUp => powerUp.draw());
-        
+
         // Draw player
         player.draw();
-        
+
         // Draw shield effect
         if (game.shieldActive) {
             ctx.save();
@@ -2645,7 +2673,7 @@ function gameLoop() {
             ctx.stroke();
             ctx.restore();
         }
-        
+
         // Draw ultimate active effect
         if (game.ultimateActive) {
             ctx.save();
@@ -2660,10 +2688,10 @@ function gameLoop() {
             ctx.stroke();
             ctx.restore();
         }
-        
+
         // Draw particles on top (explosion effects)
         game.particles.forEach(particle => particle.draw());
-        
+
         // Restore screen shake transform
         ctx.restore();
 
@@ -2678,7 +2706,7 @@ function gameLoop() {
             ctx.stroke();
             ctx.setLineDash([]);
         }
-        
+
         // Restore screen shake transform before UI
         ctx.restore();
 
@@ -2687,7 +2715,7 @@ function gameLoop() {
         game.hitIndicators.forEach(ind => ind.draw());
         game.killStreakNotifications.forEach(notif => notif.draw());
         game.achievementNotifications.forEach(notif => notif.draw());
-        
+
         // Draw UI (not affected by screen shake)
         drawUI();
     } else {
@@ -2760,7 +2788,7 @@ function updateUILanguage() {
     document.getElementById('btnStats').textContent = t('stats');
     document.getElementById('btnAchievements').textContent = t('achievements');
     document.getElementById('btnSettings').textContent = t('settings');
-    
+
     // Mode selection
     document.getElementById('modeSelectionTitle').textContent = t('selectGameMode');
     document.getElementById('mode-endless').textContent = t('endless');
@@ -2771,7 +2799,7 @@ function updateUILanguage() {
     document.getElementById('mode-killTarget-desc').textContent = t('killTargetDesc');
     document.getElementById('mode-hardcore').textContent = t('hardcore');
     document.getElementById('mode-hardcore-desc').textContent = t('hardcoreDesc');
-    
+
     // Stats
     document.getElementById('statsTitle').textContent = t('stats');
     document.getElementById('allTimeTitle').textContent = t('allTimeTitle') || 'All Time Statistics';
@@ -2779,16 +2807,16 @@ function updateUILanguage() {
     document.getElementById('totalPlayTimeLabel').textContent = t('totalPlayTime') + ':';
     document.getElementById('highScoreLabel').textContent = t('highScore') + ':';
     document.getElementById('recordLabel').textContent = t('record') + ':';
-    
+
     // Achievements
     document.getElementById('achievementsTitle').textContent = t('achievementsTitle');
-    
+
     // Settings
     document.getElementById('settingsTitle').textContent = t('settings');
     document.getElementById('languageLabel').textContent = t('language') + ':';
     document.getElementById('langBtn-en').textContent = 'English';
     document.getElementById('langBtn-pt').textContent = 'Português';
-    
+
     // Tutorial
     document.getElementById('tutorialTitle').textContent = t('welcomeTitle');
     document.getElementById('howToPlayTitle').textContent = t('howToPlay');
@@ -2796,7 +2824,7 @@ function updateUILanguage() {
     document.getElementById('dashAttackLabel').textContent = t('dashAttack') + ':';
     document.getElementById('objectiveLabel').textContent = t('objective') + ':';
     document.getElementById('movementDesc').innerHTML = t('moveInstructions').replace(/WASD/g, '<kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>').replace(/Arrow Keys/g, '<kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd>');
-    
+
     // Update language button states
     document.querySelectorAll('.lang-button').forEach(btn => {
         btn.classList.remove('active');
@@ -2825,7 +2853,7 @@ function openMainMenu() {
     document.getElementById('settingsScreen').classList.add('hidden');
     game.menuOpen = true;
     game.paused = true;
-    
+
     // Show/hide resume button based on whether a game is in progress
     const resumeBtn = document.getElementById('btnResumeGame');
     if (resumeBtn) {
@@ -2838,11 +2866,11 @@ function openMainMenu() {
 function openStatsScreen() {
     document.getElementById('statsScreen').classList.remove('hidden');
     document.getElementById('mainMenu').classList.add('hidden');
-    
+
     // Update stats
     const hours = Math.floor(game.totalPlayTime / 3600);
     const minutes = Math.floor((game.totalPlayTime % 3600) / 60);
-    
+
     document.getElementById('totalKillsValue').textContent = game.totalKills;
     document.getElementById('totalPlayTimeValue').textContent = `${hours}h ${minutes}m`;
     document.getElementById('highScoreValue').textContent = game.highScore;
@@ -2853,11 +2881,11 @@ function openStatsScreen() {
 function openAchievementsScreen() {
     document.getElementById('achievementsScreen').classList.remove('hidden');
     document.getElementById('mainMenu').classList.add('hidden');
-    
+
     // Generate achievements list
     const achievementsList = document.getElementById('achievementsList');
     achievementsList.innerHTML = '';
-    
+
     // Sample achievements to display
     const sampleAchievements = [
         { id: 'firstKill', icon: '⚔️', name: 'First Blood', desc: 'Defeat your first monster' },
@@ -2865,7 +2893,7 @@ function openAchievementsScreen() {
         { id: 'survivor', icon: '🛡️', name: 'Survivor', desc: 'Survive for 5 minutes' },
         { id: 'ultimate', icon: '⚡', name: 'Ultimate Power', desc: 'Use ultimate ability 10 times' },
     ];
-    
+
     sampleAchievements.forEach(ach => {
         const unlocked = game.achievements.includes(ach.id);
         const div = document.createElement('div');
@@ -2884,7 +2912,7 @@ function openAchievementsScreen() {
 function openSettingsScreen() {
     document.getElementById('settingsScreen').classList.remove('hidden');
     document.getElementById('mainMenu').classList.add('hidden');
-    
+
     // Update language button states
     document.querySelectorAll('.lang-button').forEach(btn => {
         btn.classList.remove('active');
@@ -2907,7 +2935,7 @@ function initMenu() {
     const statsScreen = document.getElementById('statsScreen');
     const achievementsScreen = document.getElementById('achievementsScreen');
     const settingsScreen = document.getElementById('settingsScreen');
-    
+
     // Add Resume button to main menu (if not already present)
     let resumeButton = document.getElementById('btnResumeGame');
     if (!resumeButton) {
@@ -2922,19 +2950,19 @@ function initMenu() {
     } else {
         resumeButton.textContent = t('resume');
     }
-    
+
     // Main menu buttons
     document.getElementById('btnPlayGame').addEventListener('click', startGameFromMenu);
     document.getElementById('btnStats').addEventListener('click', openStatsScreen);
     document.getElementById('btnAchievements').addEventListener('click', openAchievementsScreen);
     document.getElementById('btnSettings').addEventListener('click', openSettingsScreen);
-    
+
     // Back buttons
     document.getElementById('btnBackToMenu').addEventListener('click', openMainMenu);
     document.getElementById('btnBackFromStats').addEventListener('click', openMainMenu);
     document.getElementById('btnBackFromAchievements').addEventListener('click', openMainMenu);
     document.getElementById('btnBackFromSettings').addEventListener('click', openMainMenu);
-    
+
     // Language buttons
     document.querySelectorAll('.lang-button').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -2942,7 +2970,7 @@ function initMenu() {
             setLanguage(lang);
         });
     });
-    
+
     // Show main menu on start
     openMainMenu();
 }
@@ -2952,10 +2980,10 @@ function initTutorial() {
     const modeSelection = document.getElementById('modeSelection');
     const startGameBtn = document.getElementById('startGameBtn');
     const dontShowAgainCheckbox = document.getElementById('dontShowAgain');
-    
+
     // Check if user has chosen to skip tutorial
     const skipTutorial = localStorage.getItem('skipTutorial') === 'true';
-    
+
     if (skipTutorial) {
         // Show mode selection instead
         modeSelection.classList.remove('hidden');
@@ -2969,27 +2997,27 @@ function initTutorial() {
         game.tutorialShown = true;
         game.paused = true;
     }
-    
+
     // Handle start game button
     startGameBtn.addEventListener('click', () => {
         // Save preference if checkbox is checked
         if (dontShowAgainCheckbox.checked) {
             localStorage.setItem('skipTutorial', 'true');
         }
-        
+
         // Hide tutorial, show mode selection
         tutorialOverlay.classList.add('hidden');
         modeSelection.classList.remove('hidden');
         game.tutorialShown = false;
         game.paused = true;
     });
-    
+
     // Handle game mode selection
     document.querySelectorAll('.mode-button').forEach(button => {
         button.addEventListener('click', () => {
             const mode = button.dataset.mode;
             game.gameMode = mode;
-            
+
             // Set mode-specific targets
             if (mode === 'timeAttack') {
                 game.gameModeTarget = 300; // 5 minutes in seconds
@@ -2999,7 +3027,7 @@ function initTutorial() {
                 game.maxHealth = 1;
                 game.health = 1;
             }
-            
+
             modeSelection.classList.add('hidden');
             game.tutorialShown = false;
             game.paused = false;
@@ -3019,11 +3047,106 @@ function loadAchievements() {
     game.achievements = savedAchievements;
 }
 
+// Initialize touch controls
+function initTouchControls() {
+    const joystickZone = document.getElementById('joystick-zone');
+    const joystickContainer = document.getElementById('joystick-container');
+    const joystickKnob = document.getElementById('joystick-knob');
+    const dashZone = document.getElementById('dash-zone');
+
+    // Joystick Logic
+    joystickZone.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        const touch = e.changedTouches[0];
+        game.joystick.id = touch.identifier;
+        game.joystick.active = true;
+
+        // Position joystick visual
+        joystickContainer.style.display = 'block';
+        joystickContainer.style.left = `${touch.clientX}px`;
+        joystickContainer.style.top = `${touch.clientY}px`;
+        joystickKnob.style.transform = `translate(-50%, -50%)`;
+
+        // Center of joystick for calculation
+        game.joystick.centerX = touch.clientX;
+        game.joystick.centerY = touch.clientY;
+        game.joystick.x = 0;
+        game.joystick.y = 0;
+    }, { passive: false });
+
+    joystickZone.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+        if (!game.joystick.active) return;
+
+        for (let i = 0; i < e.changedTouches.length; i++) {
+            if (e.changedTouches[i].identifier === game.joystick.id) {
+                const touch = e.changedTouches[i];
+
+                const maxDist = 35; // Max joystick radius
+                let dx = touch.clientX - game.joystick.centerX;
+                let dy = touch.clientY - game.joystick.centerY;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                // Clamp visual knob
+                if (dist > maxDist) {
+                    const ratio = maxDist / dist;
+                    const visuallyDx = dx * ratio;
+                    const visuallyDy = dy * ratio;
+                    joystickKnob.style.transform = `translate(calc(-50% + ${visuallyDx}px), calc(-50% + ${visuallyDy}px))`;
+                } else {
+                    joystickKnob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+                }
+
+                // Normalize input for game (0 to 1)
+                if (dist > 0) {
+                    const normalizedMag = Math.min(dist / maxDist, 1.0);
+                    game.joystick.x = (dx / dist) * normalizedMag;
+                    game.joystick.y = (dy / dist) * normalizedMag;
+                }
+            }
+        }
+    }, { passive: false });
+
+    const endJoystick = (e) => {
+        e.preventDefault();
+        for (let i = 0; i < e.changedTouches.length; i++) {
+            if (e.changedTouches[i].identifier === game.joystick.id) {
+                game.joystick.active = false;
+                game.joystick.id = null;
+                game.joystick.x = 0;
+                game.joystick.y = 0;
+                joystickContainer.style.display = 'none';
+            }
+        }
+    };
+
+    joystickZone.addEventListener('touchend', endJoystick);
+    joystickZone.addEventListener('touchcancel', endJoystick);
+
+    // Dash Logic (Tap on right side)
+    dashZone.addEventListener('touchstart', (e) => {
+        if (game.paused) return;
+        e.preventDefault();
+
+        // Perform dash for the first touch in this zone
+        const touch = e.changedTouches[0];
+        const rect = canvas.getBoundingClientRect();
+
+        // Translate touch to game coordinates
+        // game.scale is calculated in resizeCanvas()
+        const gameX = (touch.clientX - rect.left) / game.scale;
+        const gameY = (touch.clientY - rect.top) / game.scale;
+
+        player.startDash(gameX, gameY);
+    }, { passive: false });
+}
+
 // Initialize tutorial on page load
 loadAchievements();
 updateUILanguage();
 initMenu();
 initTutorial();
+initTouchControls();
 
 // Start game
 gameLoop();

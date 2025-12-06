@@ -1,0 +1,95 @@
+/* Responsive Canvas Container */
+#game-container {
+    position: relative;
+    width: 100%;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+}
+
+#gameCanvas {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    /* Use 'block' to remove bottom accidental whitespace */
+    display: block;
+    border: 2px solid #16213e;
+    background: #0f3460;
+    cursor: crosshair;
+}
+
+/* Virtual Joystick */
+#joystick-zone,
+#dash-zone {
+    display: none;
+    /* Hidden by default on desktop to allow mouse interaction */
+}
+
+/* Touch controls only for touch devices */
+@media (pointer: coarse) {
+
+    #joystick-zone,
+    #dash-zone {
+        display: block;
+        position: absolute;
+        top: 0;
+        height: 100%;
+        z-index: 10;
+        touch-action: none;
+        /* Prevent scrolling */
+    }
+
+    #joystick-zone {
+        left: 0;
+        width: 50%;
+    }
+
+    #dash-zone {
+        right: 0;
+        width: 50%;
+    }
+}
+
+#joystick-container {
+    position: absolute;
+    width: 120px;
+    height: 120px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    display: none;
+    /* Hidden by default, shown on touch */
+    display: none;
+    /* Hidden by default, shown on touch */
+    z-index: 11;
+}
+
+#joystick-knob {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 50px;
+    height: 50px;
+    background: rgba(74, 158, 255, 0.5);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 10px rgba(74, 158, 255, 0.5);
+}
+
+@media (max-width: 768px) {
+    #ui {
+        font-size: 10px;
+        padding: 5px;
+    }
+
+    .tutorial-content {
+        padding: 20px;
+        max-width: 90%;
+    }
+
+    /* Adjust other UI elements if needed */
+}
