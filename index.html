@@ -11,10 +11,25 @@
     <div id="game-container">
         <canvas id="gameCanvas"></canvas>
         <div id="joystick-zone"></div>
-        <div id="dash-zone"></div>
+        <div id="joystick-right-zone"></div>div>
+        
+        <!-- Left Joystick Visual -->
         <div id="joystick-container">
             <div id="joystick-knob"></div>
         </div>
+
+        <!-- Right Joystick Visual -->
+        <div id="joystick-right-container">
+            <div id="joystick-right-knob"></div>
+        </div>
+
+        <!-- Mobile HUD (Top Right) -->
+        <div id="mobile-controls">
+            <button id="btnMobilePause" class="mobile-btn">⏸️</button>
+        </div>
+        
+        <!-- Mobile Game Over Controls (Centered manually via CSS when needed or reusing existing screens) -->
+        <!-- existing screens usually cover this, but we need ensure they are touch friendly -->
     </div>
 
     <div id="ui">

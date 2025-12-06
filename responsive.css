@@ -22,23 +22,22 @@
 
 /* Virtual Joystick */
 #joystick-zone,
-#dash-zone {
+#joystick-right-zone {
     display: none;
-    /* Hidden by default on desktop to allow mouse interaction */
+    /* Hidden by default */
 }
 
 /* Touch controls only for touch devices */
 @media (pointer: coarse) {
 
     #joystick-zone,
-    #dash-zone {
+    #joystick-right-zone {
         display: block;
         position: absolute;
         top: 0;
         height: 100%;
         z-index: 10;
         touch-action: none;
-        /* Prevent scrolling */
     }
 
     #joystick-zone {
@@ -46,12 +45,18 @@
         width: 50%;
     }
 
-    #dash-zone {
+    #joystick-right-zone {
         right: 0;
         width: 50%;
     }
+
+    /* Ensure UI elements don't block touch zones too much, or are placed strategically */
+    #mobile-controls {
+        display: block !important;
+    }
 }
 
+/* Left Joystick */
 #joystick-container {
     position: absolute;
     width: 120px;
@@ -62,9 +67,6 @@
     transform: translate(-50%, -50%);
     pointer-events: none;
     display: none;
-    /* Hidden by default, shown on touch */
-    display: none;
-    /* Hidden by default, shown on touch */
     z-index: 11;
 }
 
@@ -80,6 +82,56 @@
     box-shadow: 0 0 10px rgba(74, 158, 255, 0.5);
 }
 
+/* Right Joystick */
+#joystick-right-container {
+    position: absolute;
+    width: 120px;
+    height: 120px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 100, 100, 0.3);
+    /* Reddish tint for attack */
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    display: none;
+    z-index: 11;
+}
+
+#joystick-right-knob {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 50px;
+    height: 50px;
+    background: rgba(255, 100, 100, 0.5);
+    /* Reddish */
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 10px rgba(255, 100, 100, 0.5);
+}
+
+/* Mobile Controls HUD */
+#mobile-controls {
+    display: none;
+    /* Show only on touch/mobile */
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 20;
+}
+
+.mobile-btn {
+    background: rgba(0, 0, 0, 0.6);
+    border: 2px solid #fff;
+    color: #fff;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    font-size: 24px;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
 @media (max-width: 768px) {
     #ui {
         font-size: 10px;
@@ -90,6 +142,21 @@
         padding: 20px;
         max-width: 90%;
     }
+}
 
-    /* Adjust other UI elements if needed */
+/* Landscape Optimization */
+@media screen and (orientation: landscape) and (max-height: 500px) {
+
+    /* Hide non-essential UI or scale it down in landscape on small devices */
+    #ui {
+        transform: scale(0.7);
+        transform-origin: top left;
+        pointer-events: none;
+        /* Don't let huge UI block clicks in landscape */
+    }
+
+    /* Make sure instructions don't block view */
+    #instructions {
+        opacity: 0.5;
+    }
 }
