@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,12 +8,13 @@
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="responsive.css">
 </head>
+
 <body>
     <div id="game-container">
         <canvas id="gameCanvas"></canvas>
         <div id="joystick-zone"></div>
-        <div id="joystick-right-zone"></div>div>
-        
+        <div id="joystick-right-zone"></div>
+
         <!-- Left Joystick Visual -->
         <div id="joystick-container">
             <div id="joystick-knob"></div>
@@ -27,7 +29,7 @@
         <div id="mobile-controls">
             <button id="btnMobilePause" class="mobile-btn">⏸️</button>
         </div>
-        
+
         <!-- Mobile Game Over Controls (Centered manually via CSS when needed or reusing existing screens) -->
         <!-- existing screens usually cover this, but we need ensure they are touch friendly -->
     </div>
@@ -39,7 +41,7 @@
             <p>Dash into monsters to defeat them!</p>
         </div>
     </div>
-    
+
     <!-- Main Menu -->
     <div id="mainMenu" class="menu-overlay">
         <div class="menu-content">
@@ -52,7 +54,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Game Mode Selection -->
     <div id="modeSelection" class="tutorial-overlay hidden">
         <div class="tutorial-content">
@@ -78,7 +80,7 @@
             <button class="start-button" id="btnBackToMenu">Back</button>
         </div>
     </div>
-    
+
     <!-- Stats Screen -->
     <div id="statsScreen" class="tutorial-overlay hidden">
         <div class="tutorial-content">
@@ -107,7 +109,7 @@
             <button class="start-button" id="btnBackFromStats">Back</button>
         </div>
     </div>
-    
+
     <!-- Achievements Screen -->
     <div id="achievementsScreen" class="tutorial-overlay hidden">
         <div class="tutorial-content">
@@ -118,7 +120,7 @@
             <button class="start-button" id="btnBackFromAchievements">Back</button>
         </div>
     </div>
-    
+
     <!-- Settings Screen -->
     <div id="settingsScreen" class="tutorial-overlay hidden">
         <div class="tutorial-content">
@@ -135,7 +137,7 @@
             <button class="start-button" id="btnBackFromSettings">Back</button>
         </div>
     </div>
-    
+
     <!-- Tutorial Overlay -->
     <div id="tutorialOverlay" class="tutorial-overlay">
         <div class="tutorial-content">
@@ -144,28 +146,34 @@
                 <h2 id="howToPlayTitle">🎮 How to Play</h2>
                 <div class="tutorial-item">
                     <strong id="movementLabel">Movement:</strong>
-                    <p id="movementDesc">Use <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or <kbd>Arrow Keys</kbd> to move your ninja around the arena.</p>
+                    <p id="movementDesc">Use <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or <kbd>Arrow Keys</kbd>
+                        to move your ninja around the arena.</p>
                 </div>
                 <div class="tutorial-item">
                     <strong id="dashAttackLabel">Dash Attack:</strong>
-                    <p id="dashAttackDesc"><kbd>Left Click</kbd> anywhere on the screen to dash to that location. Dashing into monsters will defeat them!</p>
+                    <p id="dashAttackDesc"><kbd>Left Click</kbd> anywhere on the screen to dash to that location.
+                        Dashing into monsters will defeat them!</p>
                 </div>
                 <div class="tutorial-item">
                     <strong id="objectiveLabel">Objective:</strong>
-                    <p id="objectiveDesc">Survive as long as possible and defeat as many monsters as you can. The game gets harder over time!</p>
+                    <p id="objectiveDesc">Survive as long as possible and defeat as many monsters as you can. The game
+                        gets harder over time!</p>
                 </div>
             </div>
-            
+
             <div class="tutorial-section">
                 <h2 id="gameMechanicsTitle">💡 Game Mechanics</h2>
                 <ul>
-                    <li><strong>Health:</strong> You start with 5 hearts. Monsters damage you when they touch you (unless you're dashing).</li>
-                    <li><strong>Invulnerability:</strong> After taking damage, you're briefly invulnerable (you'll flash).</li>
+                    <li><strong>Health:</strong> You start with 5 hearts. Monsters damage you when they touch you
+                        (unless you're dashing).</li>
+                    <li><strong>Invulnerability:</strong> After taking damage, you're briefly invulnerable (you'll
+                        flash).</li>
                     <li><strong>Difficulty:</strong> Monsters spawn faster and move quicker as time passes.</li>
-                    <li><strong>Scoring:</strong> Each monster you defeat adds to your kill count. Beat your record!</li>
+                    <li><strong>Scoring:</strong> Each monster you defeat adds to your kill count. Beat your record!
+                    </li>
                 </ul>
             </div>
-            
+
             <div class="tutorial-section">
                 <h2 id="controlsSummaryTitle">⌨️ Controls Summary</h2>
                 <div class="controls-grid">
@@ -189,7 +197,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <div class="tutorial-footer">
                 <label class="checkbox-label">
                     <input type="checkbox" id="dontShowAgain">
@@ -199,8 +207,8 @@
             </div>
         </div>
     </div>
-    
+
     <script src="game.js"></script>
 </body>
-</html>
 
+</html>

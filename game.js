@@ -201,25 +201,8 @@ function setLanguage(lang) {
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-// Set canvas size
-canvas.width = 1200;
-// Set canvas size (fixed resolution, scaled via CSS)
-canvas.width = 1200;
-canvas.height = 800;
-
-function resizeCanvas() {
-    const container = document.getElementById('game-container');
-    const scaleX = container.clientWidth / canvas.width;
-    const scaleY = container.clientHeight / canvas.height;
-    game.scale = Math.min(scaleX, scaleY);
-
-    // Canvas is scaled by CSS object-fit: contain, so visual size matches aspect ratio
-    // We just need the scale factor for input coordinate mapping
-}
-
-window.addEventListener('resize', resizeCanvas);
-// Call once on init
-setTimeout(resizeCanvas, 100);
+// Set canvas size (initial)
+// Canvas size will be set by resizeCanvas() defined later, after game object initialization
 
 // Game state
 const game = {
@@ -311,6 +294,28 @@ const game = {
     musicVolume: 0.3,
     sfxVolume: 0.5,
 };
+
+function resizeCanvas() {
+    const container = document.getElementById('game-container');
+    // Ensure container exists
+    if (!container) return;
+
+    const aspect = container.clientWidth / container.clientHeight;
+
+    canvas.height = 800;
+    canvas.width = Math.max(800, canvas.height * aspect);
+
+    // Update game scale
+    if (typeof game !== 'undefined') {
+        game.scale = container.clientHeight / canvas.height;
+    }
+}
+
+window.addEventListener('resize', resizeCanvas);
+// Call once on init
+resizeCanvas();
+// Repeated call to handle late layout shifts
+setTimeout(resizeCanvas, 100);
 
 // Damage number class for visual feedback
 class DamageNumber {
@@ -824,6 +829,7 @@ class Player {
         this.vibrating = false;
         this.vibrationOffset = { x: 0, y: 0 };
         this.vibrationTime = 0;
+        this.lastInput = { x: 0, y: 0 };
     }
 
     update() {
@@ -838,6 +844,47 @@ class Player {
                 game.invulnerableTime = 0;
             }
         }
+
+        // Calculate Movement Input (Early)
+        let inputDx = 0;
+        let inputDy = 0;
+
+        // Keyboard input
+        if (game.keys['w'] || game.keys['ArrowUp']) inputDy -= 1;
+        if (game.keys['s'] || game.keys['ArrowDown']) inputDy += 1;
+        if (game.keys['a'] || game.keys['ArrowLeft']) inputDx -= 1;
+        if (game.keys['d'] || game.keys['ArrowRight']) inputDx += 1;
+
+        // Normalize keyboard movement
+        if (inputDx !== 0 || inputDy !== 0) {
+            const length = Math.sqrt(inputDx * inputDx + inputDy * inputDy);
+            if (length > 0) {
+                inputDx /= length;
+                inputDy /= length;
+            }
+        }
+
+        // Joystick input (overrides keyboard if active)
+        if (game.joystick.active) {
+            inputDx = game.joystick.x;
+            inputDy = game.joystick.y;
+        }
+
+        // Check for Dash Cancel (Change in input)
+        // We compare current input with last frame's input
+        // If significantly different, and dashing, we cancel
+        if (this.dashing && this.lastInput) {
+            const diffX = Math.abs(inputDx - this.lastInput.x);
+            const diffY = Math.abs(inputDy - this.lastInput.y);
+            // Threshold to ignore micro-jitters from touch
+            if (diffX > 0.5 || diffY > 0.5) {
+                this.dashing = false;
+                // Don't warp position, just return control
+            }
+        }
+
+        // Store input for next frame
+        this.lastInput = { x: inputDx, y: inputDy };
 
         // Handle dash
         if (this.dashing) {
@@ -866,30 +913,10 @@ class Player {
         }
 
         // Handle normal movement (only when not dashing)
+        // Note: we use the already calculated inputDx/inputDy
         if (!this.dashing) {
-            let dx = 0;
-            let dy = 0;
-
-            // Keyboard input
-            if (game.keys['w'] || game.keys['ArrowUp']) dy -= 1;
-            if (game.keys['s'] || game.keys['ArrowDown']) dy += 1;
-            if (game.keys['a'] || game.keys['ArrowLeft']) dx -= 1;
-            if (game.keys['d'] || game.keys['ArrowRight']) dx += 1;
-
-            // Normalize keyboard movement
-            if (dx !== 0 || dy !== 0) {
-                const length = Math.sqrt(dx * dx + dy * dy);
-                if (length > 0) {
-                    dx /= length;
-                    dy /= length;
-                }
-            }
-
-            // Joystick input (overrides keyboard if active)
-            if (game.joystick.active) {
-                dx = game.joystick.x;
-                dy = game.joystick.y;
-            }
+            const dx = inputDx;
+            const dy = inputDy;
 
             this.x += dx * this.speed * game.speedMultiplier;
             this.y += dy * this.speed * game.speedMultiplier;
@@ -3135,11 +3162,13 @@ function initTouchControls() {
         const touch = e.changedTouches[0];
         game.rightJoystick.id = touch.identifier;
         game.rightJoystick.active = true;
+        game.rightJoystick.wasOverdrive = false; // Track previous state for haptics
 
         rightJoystickContainer.style.display = 'block';
         rightJoystickContainer.style.left = `${touch.clientX}px`;
         rightJoystickContainer.style.top = `${touch.clientY}px`;
         rightJoystickKnob.style.transform = `translate(-50%, -50%)`;
+        rightJoystickKnob.classList.remove('overdrive');
 
         // Use initial touch as center
         game.rightJoystick.startX = touch.clientX;
@@ -3155,16 +3184,37 @@ function initTouchControls() {
         for (let i = 0; i < e.changedTouches.length; i++) {
             if (e.changedTouches[i].identifier === game.rightJoystick.id) {
                 const touch = e.changedTouches[i];
-                const maxDist = 50;
+
+                // Two-Step Config
+                const normalRadius = 50;
+                const overdriveRadius = 90;
+
                 let dx = touch.clientX - game.rightJoystick.startX;
                 let dy = touch.clientY - game.rightJoystick.startY;
                 const dist = Math.sqrt(dx * dx + dy * dy);
 
-                if (dist > maxDist) {
-                    const ratio = maxDist / dist;
+                // Visual limiting
+                // We allow visual stretching up to overdriveRadius
+                const visualLimit = overdriveRadius;
+
+                if (dist > visualLimit) {
+                    const ratio = visualLimit / dist;
                     rightJoystickKnob.style.transform = `translate(calc(-50% + ${dx * ratio}px), calc(-50% + ${dy * ratio}px))`;
                 } else {
                     rightJoystickKnob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+                }
+
+                // Check Overdrive State (for haptics & visuals)
+                const isOverdrive = dist > normalRadius;
+                if (isOverdrive && !game.rightJoystick.wasOverdrive) {
+                    // Entered Overdrive
+                    if (navigator.vibrate) navigator.vibrate(20);
+                    rightJoystickKnob.classList.add('overdrive');
+                    game.rightJoystick.wasOverdrive = true;
+                } else if (!isOverdrive && game.rightJoystick.wasOverdrive) {
+                    // Left Overdrive
+                    rightJoystickKnob.classList.remove('overdrive');
+                    game.rightJoystick.wasOverdrive = false;
                 }
 
                 // Store aim vector
@@ -3185,12 +3235,39 @@ function initTouchControls() {
                 const dy = game.rightJoystick.y;
                 const dist = Math.sqrt(dx * dx + dy * dy);
 
+                const normalRadius = 50;
+                const overdriveRadius = 90; // The extra pull range
+
+                // Dash Ranges
+                const normalMaxDash = 500;
+                const overdriveMaxDash = 900;
+
                 if (dist > 10) { // Minimum drag threshold
-                    // Calculate target relative to player
-                    // Dragging behaves like aiming: standard joystick direction
-                    const aimScale = 5;
-                    const targetX = player.x + dx * aimScale;
-                    const targetY = player.y + dy * aimScale;
+                    // Calculate aim direction
+                    const dirX = dx / dist;
+                    const dirY = dy / dist;
+
+                    let dashDistance = 0;
+
+                    if (dist <= normalRadius) {
+                        // Normal Zone: 0 to 500
+                        // Map dist (0-50) to range (0-500)
+                        dashDistance = (dist / normalRadius) * normalMaxDash;
+                    } else {
+                        // Overdrive Zone: 500 to 900
+                        // Map extra dist (0-40) to extra range (0-400)
+                        // Clamp visual dist to actual overdrive limit for calculation
+                        const effectiveDist = Math.min(dist, overdriveRadius);
+                        const extraDist = effectiveDist - normalRadius;
+                        const extraRange = overdriveRadius - normalRadius;
+
+                        const extraDash = (extraDist / extraRange) * (overdriveMaxDash - normalMaxDash);
+                        dashDistance = normalMaxDash + extraDash;
+                    }
+
+                    const targetX = player.x + dirX * dashDistance;
+                    const targetY = player.y + dirY * dashDistance;
+
                     player.startDash(targetX, targetY);
                 }
 
@@ -3198,7 +3275,9 @@ function initTouchControls() {
                 game.rightJoystick.id = null;
                 game.rightJoystick.x = 0;
                 game.rightJoystick.y = 0;
+                game.rightJoystick.wasOverdrive = false;
                 rightJoystickContainer.style.display = 'none';
+                rightJoystickKnob.classList.remove('overdrive');
             }
         }
     };
