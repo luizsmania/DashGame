@@ -564,9 +564,9 @@ class SoundSystem {
 // Initialize sound system
 const soundSystem = new SoundSystem();
 
-// Particle class for explosion effects
+// Enhanced Particle class with more variety
 class Particle {
-    constructor(x, y, color = '#ff4757') {
+    constructor(x, y, color = '#ff4757', type = 'square') {
         this.x = x;
         this.y = y;
         this.vx = (Math.random() - 0.5) * 8;
@@ -577,11 +577,14 @@ class Particle {
         this.color = color;
         this.rotation = Math.random() * Math.PI * 2;
         this.rotationSpeed = (Math.random() - 0.5) * 0.2;
+        this.type = type; // 'square', 'circle', 'star', 'spark'
+        this.gravity = type === 'spark' ? 0.2 : 0;
     }
 
     update() {
         this.x += this.vx;
         this.y += this.vy;
+        this.vy += this.gravity; // Add gravity for sparks
         this.vx *= 0.95; // Friction
         this.vy *= 0.95;
         this.life -= this.decay;
@@ -595,10 +598,47 @@ class Particle {
         ctx.translate(this.x, this.y);
         ctx.rotate(this.rotation);
         ctx.fillStyle = this.color;
-        ctx.beginPath();
-        ctx.rect(-this.size / 2, -this.size / 2, this.size, this.size);
-        ctx.fill();
+
+        if (this.type === 'circle') {
+            ctx.beginPath();
+            ctx.arc(0, 0, this.size / 2, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (this.type === 'star') {
+            // Draw star
+            ctx.beginPath();
+            for (let i = 0; i < 5; i++) {
+                const angle = (Math.PI * 2 * i) / 5 - Math.PI / 2;
+                const x = Math.cos(angle) * this.size;
+                const y = Math.sin(angle) * this.size;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            ctx.fill();
+        } else if (this.type === 'spark') {
+            // Draw spark (line)
+            ctx.strokeStyle = this.color;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(this.size * 2, 0);
+            ctx.stroke();
+        } else {
+            // Square (default)
+            ctx.beginPath();
+            ctx.rect(-this.size / 2, -this.size / 2, this.size, this.size);
+            ctx.fill();
+        }
+
         ctx.restore();
+    }
+}
+
+// Helper function to create particle bursts
+function createParticleBurst(x, y, count, color, type = 'square') {
+    for (let i = 0; i < count; i++) {
+        const particle = new Particle(x, y, color, type);
+        game.particles.push(particle);
     }
 }
 
@@ -2061,6 +2101,13 @@ function checkCollisions() {
                         game.damageNumbers.push(new DamageNumber(monster.x, monster.y - 20, 10, '#4a9eff'));
                         game.hitIndicators.push(new HitIndicator(monster.x, monster.y, 'kill'));
 
+                        // Enhanced particle effects based on combo
+                        if (game.combo >= 10) {
+                            createParticleBurst(monster.x, monster.y, 15, '#ffd700', 'star');
+                        } else if (game.combo >= 5) {
+                            createParticleBurst(monster.x, monster.y, 10, '#4a9eff', 'spark');
+                        }
+
                         // Sound
                         soundSystem.playKill();
 
@@ -2100,6 +2147,11 @@ function checkCollisions() {
                     game.totalPlayTime += Math.floor(game.gameTime);
                     localStorage.setItem('totalPlayTime', game.totalPlayTime.toString());
                     localStorage.setItem('totalKills', game.totalKills.toString());
+                    
+                    // Play celebration sound for new high score
+                    if (game.score === game.highScore && game.score > 0) {
+                        setTimeout(() => soundSystem.playNewHighScore(), 500);
+                    }
                 }
             }
         }
@@ -2292,6 +2344,37 @@ function drawHeart(ctx, x, y, size, fillColor, strokeColor) {
     ctx.restore();
 }
 
+// Combo Visual Effects
+function drawComboEffects() {
+    if (game.combo >= 10) {
+        // Screen border glow
+        const intensity = Math.min(game.combo / 50, 1);
+        const pulse = Math.sin(Date.now() / 100) * 0.3 + 0.7;
+        
+        ctx.save();
+        ctx.strokeStyle = `rgba(255, 215, 0, ${intensity * pulse * 0.6})`;
+        ctx.lineWidth = 8;
+        ctx.shadowBlur = 25;
+        ctx.shadowColor = '#ffd700';
+        ctx.strokeRect(5, 5, canvas.width - 10, canvas.height - 10);
+        ctx.restore();
+    }
+
+    if (game.combo >= 25) {
+        // Subtle chromatic aberration effect
+        ctx.save();
+        ctx.globalCompositeOperation = 'screen';
+        ctx.globalAlpha = 0.08;
+        ctx.fillStyle = '#ff0000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#00ff00';
+        ctx.fillRect(2, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#0000ff';
+        ctx.fillRect(-2, 0, canvas.width, canvas.height);
+        ctx.restore();
+    }
+}
+
 // Draw UI elements
 function drawUI() {
     // Draw hearts at bottom
@@ -2431,14 +2514,47 @@ function drawGameOver() {
     ctx.fillStyle = 'rgba(0, 0, 0, 0.9)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    ctx.fillStyle = '#ffffff';
+    // Check if new high score
+    const isNewHighScore = game.score === game.highScore && game.score > 0;
+    const isNewRecord = game.kills === game.record && game.kills > 0;
+
+    // Animated title
+    const pulse = Math.sin(Date.now() / 200) * 0.1 + 1;
+    ctx.save();
+    ctx.translate(canvas.width / 2, canvas.height / 2 - 120);
+    ctx.scale(pulse, pulse);
+    ctx.fillStyle = '#ff4757';
     ctx.font = 'bold 48px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(t('gameOver'), canvas.width / 2, canvas.height / 2 - 120);
+    ctx.shadowBlur = 20;
+    ctx.shadowColor = '#ff4757';
+    ctx.fillText(t('gameOver'), 0, 0);
+    ctx.restore();
 
+    // New high score celebration
+    if (isNewHighScore || isNewRecord) {
+        ctx.fillStyle = '#ffd700';
+        ctx.font = 'bold 32px Arial';
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = '#ffd700';
+        const celebrationText = isNewHighScore ? '🎉 NEW HIGH SCORE! 🎉' : '🏆 NEW RECORD! 🏆';
+        ctx.fillText(celebrationText, canvas.width / 2, canvas.height / 2 - 160);
+    }
+
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#ffffff';
     ctx.font = '28px Arial';
     ctx.fillText(`${t('monstersKilled')}: ${game.kills}`, canvas.width / 2, canvas.height / 2 - 70);
+    
+    // Highlight score if new high score
+    if (isNewHighScore) {
+        ctx.fillStyle = '#ffd700';
+        ctx.font = 'bold 32px Arial';
+    }
     ctx.fillText(`${t('score')}: ${game.score}`, canvas.width / 2, canvas.height / 2 - 40);
+    
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '28px Arial';
     ctx.fillText(`${t('maxCombo')}: ${game.maxCombo}x`, canvas.width / 2, canvas.height / 2 - 10);
     const minutes = Math.floor(game.gameTime / 60);
     const seconds = Math.floor(game.gameTime % 60);
@@ -2446,6 +2562,7 @@ function drawGameOver() {
     ctx.fillText(`${t('highScore')}: ${game.highScore}`, canvas.width / 2, canvas.height / 2 + 50);
 
     ctx.font = '24px Arial';
+    ctx.fillStyle = '#4a9eff';
     ctx.fillText(t('pressRRestart'), canvas.width / 2, canvas.height / 2 + 100);
     ctx.fillText(t('pressEscMenu'), canvas.width / 2, canvas.height / 2 + 130);
 }
@@ -2633,6 +2750,16 @@ function gameLoop() {
         // Update player
         player.update();
 
+        // Add movement trail particles when dashing
+        if (player.dashing && Math.random() < 0.5) {
+            const trailParticle = new Particle(player.x, player.y, '#4a9eff', 'circle');
+            trailParticle.vx = 0;
+            trailParticle.vy = 0;
+            trailParticle.decay = 0.05;
+            trailParticle.size = 8;
+            game.particles.push(trailParticle);
+        }
+
         // Update monsters
         game.monsters.forEach(monster => monster.update());
 
@@ -2739,6 +2866,9 @@ function gameLoop() {
         // Restore screen shake transform before UI
         ctx.restore();
 
+        // Draw combo visual effects
+        drawComboEffects();
+
         // Draw visual feedback (not affected by screen shake)
         game.damageNumbers.forEach(num => num.draw());
         game.hitIndicators.forEach(ind => ind.draw());
@@ -2750,6 +2880,7 @@ function gameLoop() {
     } else {
         // Draw game over screen
         drawGameOver();
+        showGameOverButtons();
     }
 
     requestAnimationFrame(gameLoop);
@@ -2757,6 +2888,9 @@ function gameLoop() {
 
 // Restart game function
 function restartGame() {
+    // Hide game over buttons
+    hideGameOverButtons();
+    
     // Reset health based on game mode
     if (game.gameMode === 'hardcore') {
         game.maxHealth = 1;
@@ -3304,12 +3438,157 @@ function initTouchControls() {
     }
 }
 
+// Share Score Feature
+function initShareButton() {
+    const shareBtn = document.getElementById('shareScoreBtn');
+    if (!shareBtn) return;
+
+    shareBtn.addEventListener('click', () => {
+        const minutes = Math.floor(game.gameTime / 60);
+        const seconds = Math.floor(game.gameTime % 60);
+        const timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        
+        const text = `🥷 I scored ${game.score} points in Dash Combat!\n\n` +
+                    `💀 Kills: ${game.kills}\n` +
+                    `🔥 Max Combo: ${game.maxCombo}x\n` +
+                    `⏱️ Time: ${timeStr}\n\n` +
+                    `Can you beat me?`;
+        
+        if (navigator.share) {
+            navigator.share({
+                title: 'Dash Combat - My Score',
+                text: text,
+                url: window.location.href
+            }).catch(err => {
+                if (err.name !== 'AbortError') {
+                    console.log('Share failed:', err);
+                }
+            });
+        } else {
+            // Fallback: Copy to clipboard
+            const fullText = text + '\n\n' + window.location.href;
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(fullText)
+                    .then(() => {
+                        // Show feedback
+                        shareBtn.textContent = '✅ Copied!';
+                        setTimeout(() => {
+                            shareBtn.textContent = '📱 Share Score';
+                        }, 2000);
+                    })
+                    .catch(() => {
+                        alert('Share not supported. Copy this:\n\n' + fullText);
+                    });
+            } else {
+                alert('Share not supported. Copy this:\n\n' + fullText);
+            }
+        }
+    });
+}
+
+// Show buttons on game over
+function showGameOverButtons() {
+    const quickRestartBtn = document.getElementById('quickRestartBtn');
+    const shareBtn = document.getElementById('shareScoreBtn');
+    
+    if (quickRestartBtn && game.gameOver) {
+        quickRestartBtn.style.display = 'block';
+    }
+    if (shareBtn && game.gameOver) {
+        shareBtn.style.display = 'block';
+    }
+}
+
+function hideGameOverButtons() {
+    const quickRestartBtn = document.getElementById('quickRestartBtn');
+    const shareBtn = document.getElementById('shareScoreBtn');
+    
+    if (quickRestartBtn) {
+        quickRestartBtn.style.display = 'none';
+    }
+    if (shareBtn) {
+        shareBtn.style.display = 'none';
+    }
+}
+
+// Quick Restart Handler
+function initQuickRestart() {
+    const quickRestartBtn = document.getElementById('quickRestartBtn');
+    if (!quickRestartBtn) return;
+
+    quickRestartBtn.addEventListener('click', () => {
+        restartGame();
+        hideGameOverButtons();
+    });
+}
+
+// Enhanced Sound System
+class EnhancedSoundSystem extends SoundSystem {
+    playDash() {
+        // Whoosh sound
+        this.playTone(600, 0.08, 'sine', 0.2);
+        setTimeout(() => this.playTone(400, 0.08, 'sine', 0.15), 30);
+    }
+
+    playKill() {
+        // Satisfying kill sound
+        this.playTone(800, 0.05, 'square', 0.3);
+        setTimeout(() => this.playTone(600, 0.05, 'square', 0.25), 40);
+        setTimeout(() => this.playTone(400, 0.08, 'sine', 0.2), 80);
+    }
+
+    playCombo(multiplier) {
+        // Escalating combo sound
+        const baseFreq = 400;
+        const freq = baseFreq + (multiplier * 30);
+        this.playTone(freq, 0.1, 'sine', 0.3);
+        setTimeout(() => this.playTone(freq * 1.5, 0.1, 'sine', 0.2), 50);
+    }
+
+    playPowerUp() {
+        // Power-up jingle
+        this.playTone(523, 0.1, 'sine', 0.4); // C
+        setTimeout(() => this.playTone(659, 0.1, 'sine', 0.4), 100); // E
+        setTimeout(() => this.playTone(784, 0.2, 'sine', 0.4), 200); // G
+    }
+
+    playHit() {
+        // Painful hit sound
+        this.playTone(150, 0.2, 'sawtooth', 0.4);
+    }
+
+    playUltimate() {
+        // Epic ultimate sound
+        for (let i = 0; i < 5; i++) {
+            setTimeout(() => {
+                this.playTone(200 + (i * 100), 0.1, 'sine', 0.5 - (i * 0.08));
+            }, i * 50);
+        }
+    }
+
+    playNewHighScore() {
+        // Victory fanfare
+        const notes = [523, 659, 784, 1047]; // C E G C
+        notes.forEach((note, i) => {
+            setTimeout(() => this.playTone(note, 0.2, 'sine', 0.4), i * 150);
+        });
+    }
+}
+
+// Replace sound system with enhanced version
+const enhancedSoundSystem = new EnhancedSoundSystem();
+// Keep reference to old one for compatibility
+Object.setPrototypeOf(soundSystem, EnhancedSoundSystem.prototype);
+Object.assign(soundSystem, enhancedSoundSystem);
+
 // Initialize tutorial on page load
 loadAchievements();
 updateUILanguage();
 initMenu();
 initTutorial();
 initTouchControls();
+initShareButton();
+initQuickRestart();
 
 // Start game
 gameLoop();

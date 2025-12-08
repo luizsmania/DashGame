@@ -39,6 +39,16 @@
 
         <!-- Mobile Game Over Controls (Centered manually via CSS when needed or reusing existing screens) -->
         <!-- existing screens usually cover this, but we need ensure they are touch friendly -->
+
+        <!-- Quick Restart Button -->
+        <button id="quickRestartBtn" class="quick-restart-btn" style="display: none;">
+            🔄 Play Again
+        </button>
+
+        <!-- Share Score Button -->
+        <button id="shareScoreBtn" class="share-button" style="display: none;">
+            📱 Share Score
+        </button>
     </div>
 
     <div id="ui">
@@ -216,6 +226,106 @@
     </div>
 
     <script src="game.js"></script>
+    <style>
+        @keyframes slideUp {
+            from {
+                transform: translateX(-50%) translateY(100px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(-50%) translateY(0);
+                opacity: 1;
+            }
+        }
+    </style>
+    <script>
+        // Register Service Worker for PWA
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js')
+                .then(reg => console.log('✅ Service Worker registered - Game can work offline!'))
+                .catch(err => console.log('❌ Service Worker registration failed:', err));
+        }
+
+        // PWA Install Prompt
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            
+            // Show install prompt after first game (stored in localStorage)
+            const gamesPlayed = parseInt(localStorage.getItem('gamesPlayed') || '0');
+            if (gamesPlayed >= 1) {
+                setTimeout(showInstallPrompt, 2000); // Show after 2 seconds
+            }
+        });
+
+        function showInstallPrompt() {
+            if (!deferredPrompt) return;
+            
+            const installBanner = document.createElement('div');
+            installBanner.id = 'installBanner';
+            installBanner.style.cssText = `
+                position: fixed;
+                bottom: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: linear-gradient(135deg, #4a9eff 0%, #357abd 100%);
+                color: white;
+                padding: 15px 25px;
+                border-radius: 10px;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+                z-index: 10000;
+                display: flex;
+                gap: 15px;
+                align-items: center;
+                animation: slideUp 0.5s ease-out;
+                max-width: 90%;
+                flex-wrap: wrap;
+                justify-content: center;
+            `;
+            installBanner.innerHTML = `
+                <span style="font-size: 16px;">📱 Install Dash Combat for quick access!</span>
+                <button id="installBtn" style="background: white; color: #4a9eff; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 14px; transition: all 0.2s;">Install</button>
+                <button id="dismissBtn" style="background: transparent; color: white; border: 1px solid white; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 14px; transition: all 0.2s;">Later</button>
+            `;
+            document.body.appendChild(installBanner);
+
+            // Add hover effects
+            const installBtn = document.getElementById('installBtn');
+            const dismissBtn = document.getElementById('dismissBtn');
+            
+            installBtn.addEventListener('mouseenter', () => {
+                installBtn.style.transform = 'scale(1.05)';
+            });
+            installBtn.addEventListener('mouseleave', () => {
+                installBtn.style.transform = 'scale(1)';
+            });
+
+            installBtn.addEventListener('click', async () => {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                console.log(`User ${outcome === 'accepted' ? 'accepted' : 'dismissed'} the install prompt`);
+                deferredPrompt = null;
+                installBanner.remove();
+            });
+
+            dismissBtn.addEventListener('click', () => {
+                installBanner.style.animation = 'slideUp 0.3s ease-out reverse';
+                setTimeout(() => installBanner.remove(), 300);
+            });
+        }
+
+        // Track games played
+        window.addEventListener('load', () => {
+            const gamesPlayed = parseInt(localStorage.getItem('gamesPlayed') || '0');
+            localStorage.setItem('gamesPlayed', (gamesPlayed + 1).toString());
+        });
+
+        // Show install success message
+        window.addEventListener('appinstalled', () => {
+            console.log('🎉 App installed successfully!');
+        });
+    </script>
 </body>
 
 </html>
