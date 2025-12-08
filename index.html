@@ -35,6 +35,12 @@
         <!-- Mobile HUD (Top Right) -->
         <div id="mobile-controls">
             <button id="btnMobilePause" class="mobile-btn">⏸️</button>
+            <button id="btnMobileUltimate" class="mobile-btn ultimate-btn" style="display: none;">⚡ ULT</button>
+        </div>
+
+        <!-- Active Effects Display (Top Left) -->
+        <div id="activeEffects" class="active-effects-container">
+            <!-- Populated by JavaScript -->
         </div>
 
         <!-- Mobile Game Over Controls (Centered manually via CSS when needed or reusing existing screens) -->
@@ -51,13 +57,6 @@
         </button>
     </div>
 
-    <div id="ui">
-        <div id="instructions">
-            <p>WASD or Arrow Keys: Move</p>
-            <p>Left Click: Dash to cursor position</p>
-            <p>Dash into monsters to defeat them!</p>
-        </div>
-    </div>
 
     <!-- Main Menu -->
     <div id="mainMenu" class="menu-overlay">
@@ -65,6 +64,7 @@
             <h1 id="menuTitle">Main Menu</h1>
             <div class="menu-buttons">
                 <button class="menu-button" id="btnPlayGame">Play Game</button>
+                <button class="menu-button" id="btnShop">🛒 Shop</button>
                 <button class="menu-button" id="btnStats">Stats</button>
                 <button class="menu-button" id="btnAchievements">Achievements</button>
                 <button class="menu-button" id="btnSettings">Settings</button>
@@ -93,8 +93,56 @@
                     <h3 id="mode-hardcore">Hardcore</h3>
                     <p id="mode-hardcore-desc">One hit and you're out. Ultimate challenge!</p>
                 </button>
+                <button class="mode-button" data-mode="waves">
+                    <h3>🌊 Wave Mode</h3>
+                    <p>Strategic waves with breaks. Plan your strategy!</p>
+                </button>
             </div>
             <button class="start-button" id="btnBackToMenu">Back</button>
+        </div>
+    </div>
+
+    <!-- Ability Loadout Selection -->
+    <div id="abilitySelection" class="tutorial-overlay hidden">
+        <div class="tutorial-content">
+            <h1>⚔️ Choose Your Abilities</h1>
+            <p style="text-align: center; color: #e0e0e0; margin-bottom: 20px;">Select 3 abilities to customize your playstyle</p>
+            <div id="abilityList" class="ability-grid">
+                <!-- Populated by JavaScript -->
+            </div>
+            <div style="margin-top: 20px; text-align: center;">
+                <div id="selectedAbilities" style="color: #4a9eff; font-weight: bold; margin-bottom: 15px;">
+                    Selected: <span id="selectedCount">0</span>/3
+                </div>
+                <button class="start-button" id="btnStartWithAbilities" disabled>Start Game</button>
+                <button class="start-button" id="btnSkipAbilities" style="background: rgba(74, 158, 255, 0.3); margin-top: 10px;">Skip (Use Default)</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Wave Break Screen -->
+    <div id="waveBreakScreen" class="tutorial-overlay hidden">
+        <div class="tutorial-content">
+            <h1 id="waveBreakTitle">Wave Complete!</h1>
+            <div id="wavePreview" style="margin: 20px 0;">
+                <h2 style="color: #4a9eff; margin-bottom: 15px;">Next Wave Preview</h2>
+                <div id="waveEnemiesPreview" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;">
+                    <!-- Populated by JavaScript -->
+                </div>
+            </div>
+            <div style="margin: 20px 0; padding: 15px; background: rgba(15, 52, 96, 0.5); border-radius: 8px;">
+                <div style="display: flex; justify-content: space-around; text-align: center;">
+                    <div>
+                        <div style="font-size: 24px; font-weight: bold; color: #ffd700;">💰</div>
+                        <div style="color: #e0e0e0;">+<span id="waveRewardCoins">0</span> Coins</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 24px; font-weight: bold; color: #4a9eff;">⭐</div>
+                        <div style="color: #e0e0e0;">+<span id="waveRewardXP">0</span> XP</div>
+                    </div>
+                </div>
+            </div>
+            <button class="start-button" id="btnContinueWave">Continue (5s)</button>
         </div>
     </div>
 
@@ -138,6 +186,30 @@
         </div>
     </div>
 
+    <!-- Shop Screen -->
+    <div id="shopScreen" class="tutorial-overlay hidden">
+        <div class="tutorial-content shop-content">
+            <h1 id="shopTitle">🛒 Shop</h1>
+            <div class="shop-header">
+                <div class="coins-display">
+                    <span class="coins-icon">💰</span>
+                    <span id="shopCoinsValue">0</span>
+                </div>
+            </div>
+            <div class="shop-tabs">
+                <button class="shop-tab active" data-tab="skins">Skins</button>
+                <button class="shop-tab" data-tab="upgrades">Upgrades</button>
+                <button class="shop-tab" data-tab="boosts">Boosts</button>
+            </div>
+            <div class="shop-items-container">
+                <div id="shopItemsList" class="shop-items-list">
+                    <!-- Populated by JavaScript -->
+                </div>
+            </div>
+            <button class="start-button" id="btnBackFromShop">Back</button>
+        </div>
+    </div>
+
     <!-- Settings Screen -->
     <div id="settingsScreen" class="tutorial-overlay hidden">
         <div class="tutorial-content">
@@ -152,6 +224,56 @@
                 </div>
             </div>
             <button class="start-button" id="btnBackFromSettings">Back</button>
+        </div>
+    </div>
+
+    <!-- Game Over Screen -->
+    <div id="gameOverScreen" class="tutorial-overlay hidden">
+        <div class="tutorial-content game-over-content">
+            <h1 id="gameOverTitle" class="game-over-title">Game Over</h1>
+            <div id="gameOverCelebration" class="game-over-celebration" style="display: none;"></div>
+            
+            <div class="game-over-stats">
+                <div class="stat-card">
+                    <div class="stat-icon">👹</div>
+                    <div class="stat-label" id="gameOverKillsLabel">Monsters Defeated</div>
+                    <div class="stat-value" id="gameOverKillsValue">0</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon">⭐</div>
+                    <div class="stat-label" id="gameOverScoreLabel">Score</div>
+                    <div class="stat-value" id="gameOverScoreValue">0</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon">🔥</div>
+                    <div class="stat-label" id="gameOverComboLabel">Max Combo</div>
+                    <div class="stat-value" id="gameOverComboValue">0x</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon">⏱️</div>
+                    <div class="stat-label" id="gameOverTimeLabel">Survived</div>
+                    <div class="stat-value" id="gameOverTimeValue">0:00</div>
+                </div>
+            </div>
+            
+            <div class="game-over-highscore">
+                <div class="highscore-label" id="gameOverHighScoreLabel">High Score</div>
+                <div class="highscore-value" id="gameOverHighScoreValue">0</div>
+            </div>
+            
+            <div class="game-over-buttons">
+                <button class="game-over-btn primary" id="btnPlayAgain">
+                    <span class="btn-icon">🔄</span>
+                    <span>Play Again</span>
+                </button>
+                <button class="game-over-btn secondary" id="btnMainMenu">
+                    <span class="btn-icon">🏠</span>
+                    <span>Main Menu</span>
+                </button>
+            </div>
         </div>
     </div>
 

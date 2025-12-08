@@ -204,6 +204,26 @@ const ctx = canvas.getContext('2d');
 // Set canvas size (initial)
 // Canvas size will be set by resizeCanvas() defined later, after game object initialization
 
+// Animated Background System - Declare early to avoid initialization errors
+const backgroundStars = [];
+function initBackgroundStars() {
+    if (!canvas || canvas.width === 0 || canvas.height === 0) {
+        return; // Canvas not ready yet
+    }
+    backgroundStars.length = 0;
+    const starCount = Math.floor((canvas.width * canvas.height) / 8000);
+    for (let i = 0; i < starCount; i++) {
+        backgroundStars.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            size: Math.random() * 2 + 0.5,
+            speed: Math.random() * 0.5 + 0.1,
+            opacity: Math.random() * 0.5 + 0.3,
+            twinkle: Math.random() * Math.PI * 2
+        });
+    }
+}
+
 // Game state
 const game = {
     // Menu state
@@ -262,9 +282,20 @@ const game = {
     speedBoostActive: false,
     speedBoostTime: 0,
     speedMultiplier: 1.0,
+    coinMultiplier: 1.0, // Coin multiplier from shop boosts
     // Game mode
-    gameMode: 'endless', // endless, timeAttack, killTarget, hardcore
+    gameMode: 'endless', // endless, timeAttack, killTarget, hardcore, waves
     gameModeTarget: 0, // Target for time/kill modes
+    // Wave system
+    waveMode: false,
+    currentWave: 0,
+    waveBreakTime: 0,
+    waveBreakDuration: 5000, // 5 seconds
+    inWaveBreak: false,
+    enemiesRemaining: 0,
+    // Ability loadout
+    selectedAbilities: [],
+    activeAbilities: {}, // Active ability states
     // Progression
     totalKills: parseInt(localStorage.getItem('totalKills')) || 0,
     totalPlayTime: parseInt(localStorage.getItem('totalPlayTime')) || 0,
@@ -302,12 +333,21 @@ function resizeCanvas() {
 
     const aspect = container.clientWidth / container.clientHeight;
 
-    canvas.height = 800;
-    canvas.width = Math.max(800, canvas.height * aspect);
+    // Better responsive sizing
+    const maxHeight = Math.min(800, window.innerHeight * 0.95);
+    const maxWidth = Math.min(1200, window.innerWidth * 0.95);
+    
+    canvas.height = maxHeight;
+    canvas.width = Math.max(800, Math.min(maxWidth, canvas.height * aspect));
 
     // Update game scale
     if (typeof game !== 'undefined') {
         game.scale = container.clientHeight / canvas.height;
+    }
+    
+    // Reinitialize background stars on resize
+    if (typeof initBackgroundStars === 'function') {
+        initBackgroundStars();
     }
 }
 
@@ -866,6 +906,8 @@ class Player {
         this.dashing = false;
         this.dashSpeed = 15;
         this.dashTarget = { x: 0, y: 0 };
+        this.dashDamage = 1.0;
+        this.isTeleport = false;
         this.vibrating = false;
         this.vibrationOffset = { x: 0, y: 0 };
         this.vibrationTime = 0;
@@ -991,22 +1033,64 @@ class Player {
         // Can't start new dash while already dashing
         if (this.dashing) return;
 
-        // Check if player has enough dash energy
-        if (game.dashEnergy < game.dashCost) return;
+        // Apply ability modifications
+        let dashCost = game.dashCost;
+        let dashRange = 1.0;
+        let dashDamage = 1.0;
+        let isTeleport = false;
 
-        // Clamp target to screen bounds
-        const clampedX = Math.max(this.radius, Math.min(canvas.width - this.radius, targetX));
-        const clampedY = Math.max(this.radius, Math.min(canvas.height - this.radius, targetY));
+        if (game.activeAbilities.quickDash) {
+            dashCost = game.dashCost * 0.5;
+            dashRange = 0.5;
+        } else if (game.activeAbilities.powerDash) {
+            dashCost = game.dashCost * 2.0;
+            dashRange = 2.0;
+            dashDamage = 2.0;
+        } else if (game.activeAbilities.teleport) {
+            dashCost = game.dashCost * 0.3;
+            isTeleport = true;
+        }
+
+        // Check if player has enough dash energy
+        if (game.dashEnergy < dashCost) return;
+
+        // Calculate dash distance
+        const dx = targetX - this.x;
+        const dy = targetY - this.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        const maxDashDistance = 200 * dashRange;
+
+        // Clamp target based on dash range
+        let finalX = targetX;
+        let finalY = targetY;
+        if (distance > maxDashDistance) {
+            const angle = Math.atan2(dy, dx);
+            finalX = this.x + Math.cos(angle) * maxDashDistance;
+            finalY = this.y + Math.sin(angle) * maxDashDistance;
+        }
+
+        // Clamp to screen bounds
+        const clampedX = Math.max(this.radius, Math.min(canvas.width - this.radius, finalX));
+        const clampedY = Math.max(this.radius, Math.min(canvas.height - this.radius, finalY));
 
         this.dashTarget.x = clampedX;
         this.dashTarget.y = clampedY;
         this.dashing = true;
+        this.dashDamage = dashDamage;
+        this.isTeleport = isTeleport;
 
         // Consume dash energy
-        game.dashEnergy = Math.max(0, game.dashEnergy - game.dashCost);
+        game.dashEnergy = Math.max(0, game.dashEnergy - dashCost);
 
         // Sound
         soundSystem.playDash();
+        
+        // Teleport ability: instant movement
+        if (isTeleport) {
+            this.x = clampedX;
+            this.y = clampedY;
+            this.dashing = false;
+        }
     }
 
     draw() {
@@ -1017,8 +1101,14 @@ class Player {
         const isFlashing = game.invulnerable && Math.floor(game.invulnerableTime / 50) % 2 === 0;
         const alpha = isFlashing ? 0.5 : 1.0;
 
+        // Get current skin
+        const skin = ninjaSkins[playerProgression.currentSkin] || ninjaSkins.default;
+        const bodyColor = skin.bodyColor.replace('1)', `${alpha})`);
+        const headColor = skin.headColor.replace('1)', `${alpha})`);
+        const eyeColor = skin.eyeColor.replace('1)', `${alpha})`);
+
         // Draw ninja body (torso)
-        ctx.fillStyle = `rgba(30, 30, 30, ${alpha})`;
+        ctx.fillStyle = bodyColor;
         ctx.beginPath();
         ctx.ellipse(0, 5, 8, 12, 0, 0, Math.PI * 2);
         ctx.fill();
@@ -1027,7 +1117,7 @@ class Player {
         ctx.stroke();
 
         // Draw ninja head
-        ctx.fillStyle = `rgba(40, 40, 40, ${alpha})`;
+        ctx.fillStyle = headColor;
         ctx.beginPath();
         ctx.arc(0, -8, 10, 0, Math.PI * 2);
         ctx.fill();
@@ -1041,11 +1131,11 @@ class Player {
         ctx.ellipse(0, -5, 12, 6, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Draw eyes (glowing when dashing)
+        // Draw eyes (glowing when dashing, using skin color)
         if (this.dashing) {
             ctx.fillStyle = `rgba(255, 100, 100, ${alpha})`;
         } else {
-            ctx.fillStyle = `rgba(100, 200, 255, ${alpha})`;
+            ctx.fillStyle = eyeColor;
         }
         ctx.beginPath();
         ctx.arc(-4, -5, 2, 0, Math.PI * 2);
@@ -1054,8 +1144,8 @@ class Player {
         ctx.arc(4, -5, 2, 0, Math.PI * 2);
         ctx.fill();
 
-        // Draw ninja arms (extended when dashing)
-        ctx.fillStyle = `rgba(30, 30, 30, ${alpha})`;
+        // Draw ninja arms (extended when dashing, using body color)
+        ctx.fillStyle = bodyColor;
         if (this.dashing) {
             const dx = this.dashTarget.x - this.x;
             const dy = this.dashTarget.y - this.y;
@@ -1085,8 +1175,8 @@ class Player {
             ctx.stroke();
         }
 
-        // Draw legs
-        ctx.fillStyle = `rgba(25, 25, 25, ${alpha})`;
+        // Draw legs (using body color)
+        ctx.fillStyle = bodyColor.replace(alpha.toString(), (alpha * 0.8).toString());
         ctx.beginPath();
         ctx.ellipse(-5, 18, 4, 8, 0, 0, Math.PI * 2);
         ctx.fill();
@@ -1186,9 +1276,12 @@ class Monster {
     constructor(x, y, type = 'normal') {
         this.x = x;
         this.y = y;
-        this.type = type; // 'normal', 'fast', 'tank', 'splitter', 'exploder', 'ranged'
+        this.type = type; // 'normal', 'fast', 'tank', 'splitter', 'exploder', 'ranged', 'shaman', 'shield', 'commander'
         this.lastShotTime = 0;
         this.shootInterval = 2000; // For ranged enemies
+        this.threatLevel = 1; // 1=low, 2=medium, 3=high
+        this.auraRadius = 0; // For synergy enemies
+        this.lastHealTime = 0; // For shaman
 
         // Set properties based on type
         if (type === 'fast') {
@@ -1196,32 +1289,62 @@ class Monster {
             this.baseSpeed = game.baseMonsterSpeed * 1.8;
             this.color = '#ff6b7a';
             this.health = 1;
+            this.threatLevel = 1;
         } else if (type === 'tank') {
             this.radius = 35;
             this.baseSpeed = game.baseMonsterSpeed * 0.6;
             this.color = '#8b0000';
             this.health = 3;
+            this.threatLevel = 2;
         } else if (type === 'splitter') {
             this.radius = 22;
             this.baseSpeed = game.baseMonsterSpeed * 1.2;
             this.color = '#9b59b6';
             this.health = 1;
+            this.threatLevel = 2;
         } else if (type === 'exploder') {
             this.radius = 20;
             this.baseSpeed = game.baseMonsterSpeed * 1.1;
             this.color = '#ff9800';
             this.health = 1;
+            this.threatLevel = 2;
         } else if (type === 'ranged') {
             this.radius = 23;
             this.baseSpeed = game.baseMonsterSpeed * 0.8;
             this.color = '#00bcd4';
             this.health = 1;
             this.shootInterval = 2500;
+            this.threatLevel = 2;
+        } else if (type === 'shaman') {
+            // Heals nearby enemies
+            this.radius = 28;
+            this.baseSpeed = game.baseMonsterSpeed * 0.7;
+            this.color = '#9b59b6';
+            this.health = 2;
+            this.auraRadius = 150;
+            this.threatLevel = 3; // High priority
+        } else if (type === 'shield') {
+            // Protects nearby enemies, blocks dashes
+            this.radius = 32;
+            this.baseSpeed = game.baseMonsterSpeed * 0.5;
+            this.color = '#4a9eff';
+            this.health = 2;
+            this.auraRadius = 120;
+            this.threatLevel = 3; // High priority
+        } else if (type === 'commander') {
+            // Buffs nearby enemies with speed/damage
+            this.radius = 40;
+            this.baseSpeed = game.baseMonsterSpeed * 0.4;
+            this.color = '#ffd700';
+            this.health = 4;
+            this.auraRadius = 200;
+            this.threatLevel = 3; // Highest priority
         } else { // normal
             this.radius = 25;
             this.baseSpeed = game.baseMonsterSpeed;
             this.color = '#ff4757';
             this.health = 1;
+            this.threatLevel = 1;
         }
 
         this.maxHealth = this.health;
@@ -1284,8 +1407,10 @@ class Monster {
             return;
         }
 
-        // Update speed based on current difficulty
-        this.speed = this.baseSpeed * game.difficultyMultiplier;
+        // Update speed based on current difficulty (unless slowed by ultimate)
+        if (!this.originalSpeed) {
+            this.speed = this.baseSpeed * game.difficultyMultiplier;
+        }
 
         // Smart AI: Predict player movement (gets smarter over time)
         // Calculate player velocity
@@ -1330,6 +1455,46 @@ class Monster {
             if (now - this.lastShotTime > this.shootInterval && distanceToPlayer < 400) {
                 game.projectiles.push(new Projectile(this.x, this.y, player.x, player.y, 4));
                 this.lastShotTime = now;
+            }
+        }
+
+        // Enemy Synergy Effects
+        if (this.auraRadius > 0 && !this.dead) {
+            // Shaman: Heal nearby enemies
+            if (this.type === 'shaman') {
+                const now = Date.now();
+                if (now - this.lastHealTime > 2000) { // Heal every 2 seconds
+                    game.monsters.forEach(monster => {
+                        if (monster !== this && !monster.dead && monster.health < monster.maxHealth) {
+                            const dx = monster.x - this.x;
+                            const dy = monster.y - this.y;
+                            const distance = Math.sqrt(dx * dx + dy * dy);
+                            if (distance < this.auraRadius) {
+                                monster.health = Math.min(monster.maxHealth, monster.health + 1);
+                            }
+                        }
+                    });
+                    this.lastHealTime = now;
+                }
+            }
+            
+            // Commander: Buff nearby enemies
+            if (this.type === 'commander') {
+                game.monsters.forEach(monster => {
+                    if (monster !== this && !monster.dead) {
+                        const dx = monster.x - this.x;
+                        const dy = monster.y - this.y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        if (distance < this.auraRadius) {
+                            // Speed and damage buff
+                            monster.speed = monster.baseSpeed * game.difficultyMultiplier * 1.5;
+                            monster.buffed = true;
+                        } else {
+                            monster.speed = monster.baseSpeed * game.difficultyMultiplier;
+                            monster.buffed = false;
+                        }
+                    }
+                });
             }
         }
 
@@ -1492,6 +1657,49 @@ class Monster {
                 ctx.beginPath();
                 ctx.arc(8, -5, 4, 0, Math.PI * 2);
                 ctx.fill();
+            }
+
+            // Draw threat indicator
+            if (!this.dead) {
+                ctx.save();
+                ctx.translate(0, -this.radius - 15);
+                let threatColor = '#4caf50'; // Green - low
+                if (this.threatLevel === 2) threatColor = '#ffd700'; // Yellow - medium
+                if (this.threatLevel === 3) threatColor = '#ff4757'; // Red - high
+                
+                ctx.fillStyle = threatColor;
+                ctx.font = 'bold 16px Arial';
+                ctx.textAlign = 'center';
+                const threatSymbol = this.threatLevel === 3 ? '⚠️' : this.threatLevel === 2 ? '⚡' : '';
+                ctx.fillText(threatSymbol, 0, 0);
+                ctx.restore();
+            }
+
+            // Draw aura for synergy enemies
+            if (!this.dead && this.auraRadius > 0) {
+                ctx.save();
+                ctx.globalAlpha = 0.2;
+                ctx.strokeStyle = this.color;
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                ctx.arc(0, 0, this.auraRadius, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                ctx.globalAlpha = 1;
+                ctx.restore();
+
+                // Draw synergy icon
+                ctx.save();
+                ctx.translate(0, -this.radius - 25);
+                let icon = '';
+                if (this.type === 'shaman') icon = '💚';
+                else if (this.type === 'shield') icon = '🛡️';
+                else if (this.type === 'commander') icon = '👑';
+                ctx.font = '20px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(icon, 0, 0);
+                ctx.restore();
             }
         }
 
@@ -1903,10 +2111,21 @@ function activateUltimate() {
         }
         game.ultimateTime = 500; // 0.5 seconds
     } else if (game.ultimateType === 'timeSlow') {
-        // Time slow - slow down enemies for 3 seconds
+        // Time slow - slow down enemies for 3 seconds (50% speed instead of 30%)
         game.ultimateTime = 3000;
         game.monsters.forEach(monster => {
-            monster.speed *= 0.3;
+            // Store original speed if not already stored
+            if (!monster.originalSpeed) {
+                monster.originalSpeed = monster.speed;
+            }
+            monster.speed = monster.originalSpeed * 0.5; // 50% speed (less extreme)
+        });
+        // Also slow down bosses
+        game.bosses.forEach(boss => {
+            if (!boss.originalSpeed) {
+                boss.originalSpeed = boss.speed;
+            }
+            boss.speed = boss.originalSpeed * 0.5;
         });
         // Visual effect - screen tint
         game.screenShake.intensity = 5; // Subtle effect
@@ -1960,9 +2179,23 @@ function updateUltimate() {
         if (game.ultimateTime <= 0) {
             game.ultimateActive = false;
             if (game.ultimateType === 'timeSlow') {
-                // Restore monster speeds
+                // Restore monster speeds properly
                 game.monsters.forEach(monster => {
-                    monster.speed = monster.baseSpeed * game.difficultyMultiplier;
+                    if (monster.originalSpeed !== undefined) {
+                        monster.speed = monster.originalSpeed;
+                        delete monster.originalSpeed;
+                    } else {
+                        monster.speed = monster.baseSpeed * game.difficultyMultiplier;
+                    }
+                });
+                // Restore boss speeds
+                game.bosses.forEach(boss => {
+                    if (boss.originalSpeed !== undefined) {
+                        boss.speed = boss.originalSpeed;
+                        delete boss.originalSpeed;
+                    } else {
+                        boss.speed = boss.baseSpeed * game.difficultyMultiplier;
+                    }
                 });
             } else if (game.ultimateType === 'damageBoost') {
                 game.damageMultiplier = 1.0;
@@ -2009,6 +2242,166 @@ function spawnBoss() {
     triggerScreenShake(10);
     soundSystem.playBossSpawn();
     game.killStreakNotifications.push(new KillStreakNotification('BOSS INCOMING!', '#ff4757'));
+}
+
+// Wave System
+const waveDefinitions = [
+    { enemies: [{type: 'normal', count: 5}], breakTime: 5000 },
+    { enemies: [{type: 'fast', count: 8}], breakTime: 5000 },
+    { enemies: [{type: 'normal', count: 3}, {type: 'tank', count: 2}], breakTime: 5000 },
+    { enemies: [{type: 'ranged', count: 4}, {type: 'normal', count: 6}], breakTime: 5000 },
+    { enemies: [{type: 'boss', count: 1}], breakTime: 10000 }, // Boss wave
+    { enemies: [{type: 'shaman', count: 2}, {type: 'normal', count: 8}], breakTime: 5000 },
+    { enemies: [{type: 'shield', count: 3}, {type: 'fast', count: 10}], breakTime: 5000 },
+    { enemies: [{type: 'commander', count: 1}, {type: 'normal', count: 12}], breakTime: 5000 },
+    { enemies: [{type: 'tank', count: 5}, {type: 'ranged', count: 6}], breakTime: 5000 },
+    { enemies: [{type: 'boss', count: 1}, {type: 'normal', count: 10}], breakTime: 10000 }, // Elite boss wave
+];
+
+function generateWave(waveNumber) {
+    // For waves beyond definition, scale up
+    if (waveNumber <= waveDefinitions.length) {
+        return waveDefinitions[waveNumber - 1];
+    }
+    
+    // Generate dynamic waves for higher levels
+    const baseWave = waveDefinitions[waveNumber % waveDefinitions.length];
+    const scale = Math.floor(waveNumber / waveDefinitions.length) + 1;
+    
+    const scaledWave = {
+        enemies: baseWave.enemies.map(e => ({
+            type: e.type,
+            count: Math.floor(e.count * scale)
+        })),
+        breakTime: baseWave.breakTime
+    };
+    
+    return scaledWave;
+}
+
+function spawnWave(waveData) {
+    game.enemiesRemaining = 0;
+    waveData.enemies.forEach(enemyGroup => {
+        game.enemiesRemaining += enemyGroup.count;
+        for (let i = 0; i < enemyGroup.count; i++) {
+            setTimeout(() => {
+                if (enemyGroup.type === 'boss') {
+                    spawnBoss();
+                } else {
+                    spawnMonster(enemyGroup.type);
+                }
+            }, i * 200); // Stagger spawns
+        }
+    });
+}
+
+function checkWaveComplete() {
+    if (!game.waveMode || game.inWaveBreak) return false;
+    
+    const aliveMonsters = game.monsters.filter(m => {
+        if (m.dead && m.exploded && m.radius <= 0) return false;
+        return !m.dead || !m.exploded || m.radius > 0;
+    }).length;
+    const aliveBosses = game.bosses.filter(b => !b.dead).length;
+    
+    return aliveMonsters === 0 && aliveBosses === 0 && game.currentWave > 0;
+}
+
+function startWaveBreak() {
+    game.inWaveBreak = true;
+    game.waveBreakTime = Date.now();
+    game.paused = true;
+    const nextWave = generateWave(game.currentWave + 1);
+    
+    // Show wave break screen
+    const waveBreakScreen = document.getElementById('waveBreakScreen');
+    if (waveBreakScreen) {
+        waveBreakScreen.classList.remove('hidden');
+        
+        // Update wave title
+        const waveTitle = document.getElementById('waveBreakTitle');
+        if (waveTitle) {
+            waveTitle.textContent = `Wave ${game.currentWave} Complete!`;
+        }
+        
+        // Update wave preview
+        const previewContainer = document.getElementById('waveEnemiesPreview');
+        if (previewContainer) {
+            previewContainer.innerHTML = '';
+            nextWave.enemies.forEach(enemyGroup => {
+                const previewDiv = document.createElement('div');
+                previewDiv.style.cssText = 'padding: 10px; background: rgba(15, 52, 96, 0.7); border-radius: 8px; text-align: center; border: 2px solid #4a9eff;';
+                previewDiv.innerHTML = `
+                    <div style="font-size: 24px; margin-bottom: 5px;">${getEnemyIcon(enemyGroup.type)}</div>
+                    <div style="color: #e0e0e0; font-weight: bold;">${enemyGroup.count}x</div>
+                    <div style="color: #aaa; font-size: 12px;">${getEnemyName(enemyGroup.type)}</div>
+                `;
+                previewContainer.appendChild(previewDiv);
+            });
+        }
+        
+        // Calculate rewards
+        const coinsReward = game.currentWave * 10;
+        const xpReward = game.currentWave * 5;
+        const coinsEl = document.getElementById('waveRewardCoins');
+        const xpEl = document.getElementById('waveRewardXP');
+        if (coinsEl) coinsEl.textContent = coinsReward;
+        if (xpEl) xpEl.textContent = xpReward;
+        
+        // Award rewards
+        playerProgression.addCoins(coinsReward);
+        playerProgression.addXP(xpReward);
+    }
+    
+    // Auto-continue after break time
+    let countdown = 5;
+    const continueBtn = document.getElementById('btnContinueWave');
+    if (continueBtn) {
+        continueBtn.textContent = `Continue (${countdown}s)`;
+        const updateCountdown = () => {
+            if (countdown > 0) {
+                countdown--;
+                continueBtn.textContent = `Continue (${countdown}s)`;
+                setTimeout(updateCountdown, 1000);
+            } else {
+                continueWave();
+            }
+        };
+        setTimeout(updateCountdown, 1000);
+    }
+}
+
+function continueWave() {
+    game.currentWave++;
+    game.inWaveBreak = false;
+    game.waveBreakTime = 0;
+    game.paused = false;
+    
+    const waveBreakScreen = document.getElementById('waveBreakScreen');
+    if (waveBreakScreen) {
+        waveBreakScreen.classList.add('hidden');
+    }
+    
+    const nextWave = generateWave(game.currentWave);
+    spawnWave(nextWave);
+}
+
+function getEnemyIcon(type) {
+    const icons = {
+        'normal': '👹', 'fast': '💨', 'tank': '🛡️', 'splitter': '💜', 
+        'exploder': '💥', 'ranged': '🏹', 'shaman': '💚', 'shield': '🛡️', 
+        'commander': '👑', 'boss': '👾'
+    };
+    return icons[type] || '👹';
+}
+
+function getEnemyName(type) {
+    const names = {
+        'normal': 'Normal', 'fast': 'Fast', 'tank': 'Tank', 'splitter': 'Splitter',
+        'exploder': 'Exploder', 'ranged': 'Ranged', 'shaman': 'Shaman', 
+        'shield': 'Shield Bearer', 'commander': 'Commander', 'boss': 'Boss'
+    };
+    return names[type] || 'Enemy';
 }
 
 // Spawn monster from random edge
@@ -2060,6 +2453,33 @@ function spawnMonster(type = null) {
 
 // Check collision between player dash and monsters
 function checkCollisions() {
+    // Check for shield bearer blocking dashes
+    let dashBlocked = false;
+    if (player.dashing) {
+        game.monsters.forEach(monster => {
+            if (monster.type === 'shield' && !monster.dead) {
+                // Check if any enemy is protected by this shield bearer
+                game.monsters.forEach(otherMonster => {
+                    if (otherMonster !== monster && !otherMonster.dead) {
+                        const dx2 = otherMonster.x - monster.x;
+                        const dy2 = otherMonster.y - monster.y;
+                        const dist2 = Math.sqrt(dx2 * dx2 + dy2 * dy2);
+                        if (dist2 < monster.auraRadius) {
+                            // Check if player dash would hit protected enemy
+                            const playerToEnemy = Math.sqrt(
+                                (player.x - otherMonster.x) ** 2 + 
+                                (player.y - otherMonster.y) ** 2
+                            );
+                            if (playerToEnemy < player.radius + otherMonster.radius + 20) {
+                                dashBlocked = true;
+                            }
+                        }
+                    }
+                });
+            }
+        });
+    }
+
     // Check monster collisions
     for (let i = game.monsters.length - 1; i >= 0; i--) {
         const monster = game.monsters[i];
@@ -2070,8 +2490,8 @@ function checkCollisions() {
         const distance = Math.sqrt(dx * dx + dy * dy);
 
         if (distance < player.radius + monster.radius) {
-            if (player.dashing) {
-                // Player hits monster with dash
+            if (player.dashing && !dashBlocked && !player.isTeleport) {
+                // Player hits monster with dash (unless blocked by shield or teleport)
                 if (!monster.dead && !monster.hasBeenKilled) {
                     // Calculate slash angle (perpendicular to dash direction)
                     const dashDx = player.dashTarget.x - player.x;
@@ -2094,8 +2514,14 @@ function checkCollisions() {
                         player.triggerVibration();
                         game.kills++;
                         game.totalKills++;
-                        addScore(10);
+                        const damage = Math.floor(10 * (player.dashDamage || 1.0));
+                        addScore(damage);
                         triggerScreenShake(3);
+
+                        // Player progression rewards
+                        playerProgression.addXP(10); // 10 XP per kill
+                        const coinReward = Math.floor(1 * (game.coinMultiplier || 1.0));
+                        playerProgression.addCoins(coinReward); // Coins per kill (with multiplier)
 
                         // Visual feedback
                         game.damageNumbers.push(new DamageNumber(monster.x, monster.y - 20, 10, '#4a9eff'));
@@ -2147,6 +2573,11 @@ function checkCollisions() {
                     game.totalPlayTime += Math.floor(game.gameTime);
                     localStorage.setItem('totalPlayTime', game.totalPlayTime.toString());
                     localStorage.setItem('totalKills', game.totalKills.toString());
+                    
+                    // Clear boost flags on game over
+                    localStorage.removeItem('activeSpeedBoost');
+                    localStorage.removeItem('activeShieldBoost');
+                    localStorage.removeItem('activeDoubleCoins');
                     
                     // Play celebration sound for new high score
                     if (game.score === game.highScore && game.score > 0) {
@@ -2287,9 +2718,11 @@ canvas.addEventListener('click', (e) => {
     }
 });
 
-// Restart game on R key, Pause on ESC, Ultimate on Space
+// Restart game on R key (optional, buttons are primary), Pause on ESC, Ultimate on Space
 document.addEventListener('keydown', (e) => {
+    // R key still works for quick restart (optional)
     if (e.key.toLowerCase() === 'r' && game.gameOver && !game.paused) {
+        hideGameOverScreen();
         restartGame();
     }
 
@@ -2498,73 +2931,87 @@ function drawUI() {
         ctx.fillText(`🛡️ ${t('shield')}: ${Math.ceil(game.shieldTime / 1000)}s`, 20, 220);
     }
 
-    // Draw game mode
+    // Draw game mode and wave info
     ctx.fillStyle = '#aaaaaa';
     ctx.font = '16px Arial';
     ctx.textAlign = 'right';
-    const modeText = game.gameMode === 'endless' ? t('endless') :
+    let modeText = game.gameMode === 'endless' ? t('endless') :
         game.gameMode === 'timeAttack' ? t('timeAttack') :
             game.gameMode === 'killTarget' ? t('killTarget') :
-                t('hardcore');
+                game.gameMode === 'waves' ? 'Wave Mode' :
+                    t('hardcore');
+    
+    if (game.waveMode && game.currentWave > 0) {
+        modeText = `Wave ${game.currentWave}`;
+        ctx.fillStyle = '#ffd700';
+    }
+    
     ctx.fillText(`${t('mode')}: ${modeText}`, canvas.width - 20, canvas.height - 20);
+    
+    // Draw wave progress
+    if (game.waveMode && game.currentWave > 0) {
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '14px Arial';
+        ctx.textAlign = 'right';
+        const aliveCount = game.monsters.filter(m => !m.dead || !m.exploded || m.radius > 0).length + 
+                         game.bosses.filter(b => !b.dead).length;
+        ctx.fillText(`Enemies: ${aliveCount}`, canvas.width - 20, canvas.height - 45);
+    }
 }
 
-// Draw game over screen
-function drawGameOver() {
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.9)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
+// Show game over screen
+function showGameOverScreen() {
+    const gameOverScreen = document.getElementById('gameOverScreen');
+    if (!gameOverScreen) return;
+    
     // Check if new high score
     const isNewHighScore = game.score === game.highScore && game.score > 0;
     const isNewRecord = game.kills === game.record && game.kills > 0;
-
-    // Animated title
-    const pulse = Math.sin(Date.now() / 200) * 0.1 + 1;
-    ctx.save();
-    ctx.translate(canvas.width / 2, canvas.height / 2 - 120);
-    ctx.scale(pulse, pulse);
-    ctx.fillStyle = '#ff4757';
-    ctx.font = 'bold 48px Arial';
-    ctx.textAlign = 'center';
-    ctx.shadowBlur = 20;
-    ctx.shadowColor = '#ff4757';
-    ctx.fillText(t('gameOver'), 0, 0);
-    ctx.restore();
-
-    // New high score celebration
-    if (isNewHighScore || isNewRecord) {
-        ctx.fillStyle = '#ffd700';
-        ctx.font = 'bold 32px Arial';
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = '#ffd700';
-        const celebrationText = isNewHighScore ? '🎉 NEW HIGH SCORE! 🎉' : '🏆 NEW RECORD! 🏆';
-        ctx.fillText(celebrationText, canvas.width / 2, canvas.height / 2 - 160);
-    }
-
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '28px Arial';
-    ctx.fillText(`${t('monstersKilled')}: ${game.kills}`, canvas.width / 2, canvas.height / 2 - 70);
     
-    // Highlight score if new high score
-    if (isNewHighScore) {
-        ctx.fillStyle = '#ffd700';
-        ctx.font = 'bold 32px Arial';
-    }
-    ctx.fillText(`${t('score')}: ${game.score}`, canvas.width / 2, canvas.height / 2 - 40);
+    // Update stats
+    document.getElementById('gameOverKillsValue').textContent = game.kills;
+    document.getElementById('gameOverScoreValue').textContent = game.score.toLocaleString();
+    document.getElementById('gameOverComboValue').textContent = `${game.maxCombo}x`;
     
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '28px Arial';
-    ctx.fillText(`${t('maxCombo')}: ${game.maxCombo}x`, canvas.width / 2, canvas.height / 2 - 10);
     const minutes = Math.floor(game.gameTime / 60);
     const seconds = Math.floor(game.gameTime % 60);
-    ctx.fillText(`${t('survived')}: ${minutes}:${seconds.toString().padStart(2, '0')}`, canvas.width / 2, canvas.height / 2 + 20);
-    ctx.fillText(`${t('highScore')}: ${game.highScore}`, canvas.width / 2, canvas.height / 2 + 50);
+    document.getElementById('gameOverTimeValue').textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    document.getElementById('gameOverHighScoreValue').textContent = game.highScore.toLocaleString();
+    
+    // Show celebration if new record
+    const celebrationEl = document.getElementById('gameOverCelebration');
+    if (isNewHighScore || isNewRecord) {
+        celebrationEl.style.display = 'block';
+        celebrationEl.textContent = isNewHighScore ? '🎉 NEW HIGH SCORE! 🎉' : '🏆 NEW RECORD! 🏆';
+        celebrationEl.className = 'game-over-celebration celebration-show';
+    } else {
+        celebrationEl.style.display = 'none';
+    }
+    
+    // Highlight score if new high score
+    const scoreCard = document.getElementById('gameOverScoreValue').parentElement;
+    if (isNewHighScore) {
+        scoreCard.classList.add('new-record');
+    } else {
+        scoreCard.classList.remove('new-record');
+    }
+    
+    // Show the screen
+    gameOverScreen.classList.remove('hidden');
+}
 
-    ctx.font = '24px Arial';
-    ctx.fillStyle = '#4a9eff';
-    ctx.fillText(t('pressRRestart'), canvas.width / 2, canvas.height / 2 + 100);
-    ctx.fillText(t('pressEscMenu'), canvas.width / 2, canvas.height / 2 + 130);
+// Hide game over screen
+function hideGameOverScreen() {
+    const gameOverScreen = document.getElementById('gameOverScreen');
+    if (gameOverScreen) {
+        gameOverScreen.classList.add('hidden');
+    }
+}
+
+// Draw game over screen (minimal - just dark overlay, UI is HTML)
+function drawGameOver() {
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 }
 
 // Update difficulty based on time
@@ -2588,29 +3035,89 @@ function updateDifficulty() {
     game.spawnInterval = Math.max(400, game.baseSpawnInterval - (game.gameTime / 10) * 200);
 }
 
-// Game loop
-function gameLoop() {
-    // Clear canvas
-    ctx.fillStyle = '#0f3460';
+// Animated Background System - Already declared above
+
+function drawAnimatedBackground() {
+    // Draw gradient background
+    const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+    gradient.addColorStop(0, 'rgba(15, 52, 96, 0.8)');
+    gradient.addColorStop(0.5, 'rgba(22, 33, 62, 0.9)');
+    gradient.addColorStop(1, 'rgba(10, 14, 25, 0.8)');
+    ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Draw grid background
-    ctx.strokeStyle = '#16213e';
+    // Draw animated grid with parallax effect
+    const time = Date.now() * 0.001;
+    const gridOffsetX = Math.sin(time * 0.1) * 10;
+    const gridOffsetY = Math.cos(time * 0.1) * 10;
+    
+    ctx.strokeStyle = 'rgba(74, 158, 255, 0.15)';
     ctx.lineWidth = 1;
-    for (let x = 0; x < canvas.width; x += 50) {
+    
+    // Vertical lines
+    for (let x = -50 + (gridOffsetX % 50); x < canvas.width; x += 50) {
         ctx.beginPath();
         ctx.moveTo(x, 0);
         ctx.lineTo(x, canvas.height);
         ctx.stroke();
     }
-    for (let y = 0; y < canvas.height; y += 50) {
+    
+    // Horizontal lines
+    for (let y = -50 + (gridOffsetY % 50); y < canvas.height; y += 50) {
         ctx.beginPath();
         ctx.moveTo(0, y);
         ctx.lineTo(canvas.width, y);
         ctx.stroke();
     }
 
-    // Pause game updates if tutorial is showing or game is paused
+    // Draw animated stars
+    const currentTime = Date.now() * 0.001;
+    backgroundStars.forEach(star => {
+        star.twinkle += 0.05;
+        star.y += star.speed;
+        if (star.y > canvas.height) {
+            star.y = -5;
+            star.x = Math.random() * canvas.width;
+        }
+        
+        const twinkleOpacity = star.opacity + Math.sin(star.twinkle) * 0.2;
+        ctx.fillStyle = `rgba(255, 255, 255, ${twinkleOpacity})`;
+        ctx.beginPath();
+        ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+        ctx.fill();
+    });
+
+    // Draw subtle energy waves
+    ctx.strokeStyle = 'rgba(74, 158, 255, 0.1)';
+    ctx.lineWidth = 2;
+    for (let i = 0; i < 3; i++) {
+        const waveTime = currentTime + i * 2;
+        const waveRadius = (waveTime * 30) % (canvas.width + canvas.height);
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, waveRadius, 0, Math.PI * 2);
+        ctx.stroke();
+    }
+}
+
+// Game loop
+function gameLoop() {
+    // Draw animated background
+    drawAnimatedBackground();
+
+    // Pause game updates if tutorial is showing, game is paused, or in wave break
+    if (game.inWaveBreak) {
+        // Draw current state but don't update
+        game.monsters.forEach(monster => monster.draw());
+        game.bosses.forEach(boss => boss.draw());
+        player.draw();
+        drawUI();
+        requestAnimationFrame(gameLoop);
+        return;
+    }
+    
     if (game.paused && game.tutorialShown) {
         // Still draw the player and monsters in their current state
         game.monsters.forEach(monster => monster.draw());
@@ -2701,6 +3208,10 @@ function gameLoop() {
             if (game.speedBoostTime <= 0) {
                 game.speedBoostActive = false;
                 game.speedMultiplier = 1.0;
+                // Clear boost flag if it was from shop
+                if (localStorage.getItem('activeSpeedBoost') === 'true') {
+                    localStorage.removeItem('activeSpeedBoost');
+                }
             }
         }
 
@@ -2708,6 +3219,10 @@ function gameLoop() {
             game.shieldTime -= 16;
             if (game.shieldTime <= 0) {
                 game.shieldActive = false;
+                // Clear boost flag if it was from shop
+                if (localStorage.getItem('activeShieldBoost') === 'true') {
+                    localStorage.removeItem('activeShieldBoost');
+                }
             }
         }
 
@@ -2730,21 +3245,37 @@ function gameLoop() {
         ctx.save();
         ctx.translate(game.screenShake.x, game.screenShake.y);
 
-        // Spawn monsters (more frequently as difficulty increases)
-        const now = Date.now();
-        if (now - game.lastSpawn > game.spawnInterval) {
-            // Spawn multiple monsters as difficulty increases
-            const spawnCount = Math.floor(game.difficultyMultiplier / 1.5) + 1;
-            for (let i = 0; i < spawnCount; i++) {
-                setTimeout(() => spawnMonster(), i * 100);
+        // Wave mode or continuous spawning
+        if (game.waveMode) {
+            // Check if wave is complete
+            if (checkWaveComplete() && !game.inWaveBreak) {
+                startWaveBreak();
             }
-            game.lastSpawn = now;
-        }
+            
+            // Don't spawn during wave break
+            if (!game.inWaveBreak && game.enemiesRemaining === 0 && game.currentWave === 0) {
+                // Start first wave
+                game.currentWave = 1;
+                const firstWave = generateWave(1);
+                spawnWave(firstWave);
+            }
+        } else {
+            // Continuous spawning (original mode)
+            const now = Date.now();
+            if (now - game.lastSpawn > game.spawnInterval) {
+                // Spawn multiple monsters as difficulty increases
+                const spawnCount = Math.floor(game.difficultyMultiplier / 1.5) + 1;
+                for (let i = 0; i < spawnCount; i++) {
+                    setTimeout(() => spawnMonster(), i * 100);
+                }
+                game.lastSpawn = now;
+            }
 
-        // Spawn boss periodically
-        if (game.kills > 0 && game.kills % 50 === 0 && now - game.lastBossSpawn > 10000) {
-            spawnBoss();
-            game.lastBossSpawn = now;
+            // Spawn boss periodically
+            if (game.kills > 0 && game.kills % 50 === 0 && now - game.lastBossSpawn > 10000) {
+                spawnBoss();
+                game.lastBossSpawn = now;
+            }
         }
 
         // Update player
@@ -2819,6 +3350,9 @@ function gameLoop() {
         // Draw player
         player.draw();
 
+        // Draw combo effects
+        drawComboEffects();
+
         // Draw shield effect
         if (game.shieldActive) {
             ctx.save();
@@ -2866,30 +3400,236 @@ function gameLoop() {
         // Restore screen shake transform before UI
         ctx.restore();
 
-        // Draw combo visual effects
-        drawComboEffects();
-
         // Draw visual feedback (not affected by screen shake)
         game.damageNumbers.forEach(num => num.draw());
         game.hitIndicators.forEach(ind => ind.draw());
         game.killStreakNotifications.forEach(notif => notif.draw());
         game.achievementNotifications.forEach(notif => notif.draw());
 
+        // Draw combo visual effects (after all game elements)
+        drawComboEffects();
+
         // Draw UI (not affected by screen shake)
         drawUI();
+
+        // Update and draw performance tracking
+        performance.update();
+        performance.draw();
+        
+        // Update active effects display
+        updateActiveEffectsDisplay();
     } else {
         // Draw game over screen
         drawGameOver();
-        showGameOverButtons();
+        showGameOverScreen();
     }
 
     requestAnimationFrame(gameLoop);
 }
 
+// Active Effects Display System
+// Cache for active effects to prevent unnecessary DOM updates
+let lastEffectsState = '';
+
+function updateActiveEffectsDisplay() {
+    const effectsContainer = document.getElementById('activeEffects');
+    if (!effectsContainer) return;
+    
+    // Only show during active gameplay
+    if (game.gameOver || game.paused || game.menuOpen || game.inWaveBreak) {
+        if (effectsContainer.innerHTML !== '') {
+            effectsContainer.innerHTML = '';
+            lastEffectsState = '';
+        }
+        return;
+    }
+    
+    // Build current state string to compare
+    const hasSpeedBoost = localStorage.getItem('activeSpeedBoost') === 'true';
+    const hasShieldBoost = localStorage.getItem('activeShieldBoost') === 'true';
+    const hasDoubleCoins = localStorage.getItem('activeDoubleCoins') === 'true';
+    
+    const speedTime = (hasSpeedBoost && game.speedBoostActive) ? Math.ceil(game.speedBoostTime / 1000) : 
+                     (game.speedBoostActive && !hasSpeedBoost) ? Math.ceil(game.speedBoostTime / 1000) : null;
+    const shieldTime = (hasShieldBoost && game.shieldActive) ? Math.ceil(game.shieldTime / 1000) :
+                      (game.shieldActive && !hasShieldBoost) ? Math.ceil(game.shieldTime / 1000) : null;
+    const ultimateTime = game.ultimateActive ? Math.ceil(game.ultimateTime / 1000) : null;
+    
+    const currentState = JSON.stringify({
+        dashEnergy: !!playerUpgrades.dashEnergy,
+        health: !!playerUpgrades.startingHealth,
+        regen: !!playerUpgrades.dashRegen,
+        sword: !!playerUpgrades.swordLength,
+        speedBoost: game.speedBoostActive,
+        speedTime: speedTime,
+        shield: game.shieldActive,
+        shieldTime: shieldTime,
+        doubleCoins: game.coinMultiplier > 1,
+        ultimate: game.ultimateActive,
+        ultimateTime: ultimateTime
+    });
+    
+    // Only update if state changed
+    if (currentState === lastEffectsState) {
+        // Just update timers on existing elements
+        const timerElements = effectsContainer.querySelectorAll('.effect-timer');
+        timerElements.forEach(timerEl => {
+            const parent = timerEl.parentElement;
+            if (parent) {
+                const emoji = parent.querySelector('.effect-emoji')?.textContent;
+                if (emoji === '💨' && speedTime !== null) {
+                    timerEl.textContent = `${speedTime}s`;
+                } else if (emoji === '🛡️' && shieldTime !== null) {
+                    timerEl.textContent = `${shieldTime}s`;
+                } else if (emoji === '⚡' && ultimateTime !== null) {
+                    timerEl.textContent = `${ultimateTime}s`;
+                }
+            }
+        });
+        return;
+    }
+    
+    lastEffectsState = currentState;
+    effectsContainer.innerHTML = '';
+    
+    // Show shop upgrades (permanent)
+    if (playerUpgrades.dashEnergy) {
+        addEffectIcon(effectsContainer, '⚡', 'Dash Energy+', null, 'shop-upgrade');
+    }
+    if (playerUpgrades.startingHealth) {
+        addEffectIcon(effectsContainer, '❤️', 'Extra Health', null, 'shop-upgrade');
+    }
+    if (playerUpgrades.dashRegen) {
+        addEffectIcon(effectsContainer, '🔄', 'Faster Regen', null, 'shop-upgrade');
+    }
+    if (playerUpgrades.swordLength) {
+        addEffectIcon(effectsContainer, '🗡️', 'Longer Sword', null, 'shop-upgrade');
+    }
+    
+    // Show active boosts from shop (temporary, one-time use)
+    if (hasSpeedBoost && game.speedBoostActive) {
+        addEffectIcon(effectsContainer, '💨', 'Speed Boost', speedTime, 'shop-boost');
+    }
+    if (hasShieldBoost && game.shieldActive) {
+        addEffectIcon(effectsContainer, '🛡️', 'Shield', shieldTime, 'shop-boost');
+    }
+    if (hasDoubleCoins && game.coinMultiplier > 1) {
+        addEffectIcon(effectsContainer, '💰', 'Double Coins', null, 'shop-boost');
+    }
+    
+    // Show active power-ups (from gameplay)
+    if (game.speedBoostActive && !hasSpeedBoost) {
+        addEffectIcon(effectsContainer, '💨', 'Speed Boost', speedTime, 'active-powerup');
+    }
+    if (game.shieldActive && !hasShieldBoost) {
+        addEffectIcon(effectsContainer, '🛡️', 'Shield', shieldTime, 'active-powerup');
+    }
+    
+    // Show ultimate active
+    if (game.ultimateActive) {
+        addEffectIcon(effectsContainer, '⚡', 'Ultimate Active', ultimateTime, 'active-powerup');
+    }
+}
+
+function addEffectIcon(container, emoji, name, timer, className) {
+    const icon = document.createElement('div');
+    icon.className = `effect-icon ${className}`;
+    icon.innerHTML = `
+        <span class="effect-emoji">${emoji}</span>
+        <span class="effect-name">${name}</span>
+        ${timer !== null ? `<span class="effect-timer">${timer}s</span>` : ''}
+    `;
+    container.appendChild(icon);
+}
+
+// Mobile Ultimate Button
+function initMobileUltimateButton() {
+    const btnUltimate = document.getElementById('btnMobileUltimate');
+    if (!btnUltimate) return;
+    
+    btnUltimate.addEventListener('click', () => {
+        if (game.ultimateReady && !game.ultimateActive && !game.paused && !game.gameOver) {
+            activateUltimate();
+        }
+    });
+    
+    // Update button visibility and state
+    function updateUltimateButton() {
+        if (game.gameOver || game.paused) {
+            btnUltimate.style.display = 'none';
+            return;
+        }
+        
+        // Show on mobile/touch devices
+        if (window.matchMedia('(pointer: coarse)').matches) {
+            btnUltimate.style.display = 'block';
+            if (game.ultimateReady) {
+                btnUltimate.classList.add('ready');
+            } else {
+                btnUltimate.classList.remove('ready');
+            }
+        } else {
+            btnUltimate.style.display = 'none';
+        }
+    }
+    
+    // Update button state continuously
+    const updateInterval = setInterval(() => {
+        if (!game || game.gameOver) {
+            clearInterval(updateInterval);
+            return;
+        }
+        updateUltimateButton();
+    }, 100);
+}
+
+// Apply shop upgrades at game start
+function applyShopUpgrades() {
+    // Apply permanent upgrades
+    if (playerUpgrades.dashEnergy) {
+        game.maxDashEnergy = Math.floor(game.maxDashEnergy * 1.2); // +20%
+    }
+    if (playerUpgrades.startingHealth) {
+        game.maxHealth += 1;
+        game.health = game.maxHealth;
+    }
+    if (playerUpgrades.dashRegen) {
+        game.dashEnergyRegen *= 1.5; // +50%
+    }
+    if (playerUpgrades.swordLength) {
+        game.swordLength += 10;
+        game.baseSwordLength += 10;
+    }
+    
+    // Apply active boosts for this game
+    if (activeBoosts.includes('speedBoost')) {
+        game.speedBoostActive = true;
+        game.speedBoostTime = 30000; // 30 seconds
+        game.speedMultiplier = 2.0;
+        localStorage.setItem('activeSpeedBoost', 'true');
+    }
+    if (activeBoosts.includes('shieldStart')) {
+        game.shieldActive = true;
+        game.shieldTime = 10000; // 10 seconds
+        localStorage.setItem('activeShieldBoost', 'true');
+    }
+    if (activeBoosts.includes('doubleCoins')) {
+        // This will be handled in the coin reward logic
+        game.coinMultiplier = 2.0;
+        localStorage.setItem('activeDoubleCoins', 'true');
+    } else {
+        game.coinMultiplier = 1.0;
+    }
+    
+    // Clear boosts after applying (they're one-time use)
+    activeBoosts = [];
+    saveUpgrades();
+}
+
 // Restart game function
 function restartGame() {
-    // Hide game over buttons
-    hideGameOverButtons();
+    // Hide game over screen
+    hideGameOverScreen();
     
     // Reset health based on game mode
     if (game.gameMode === 'hardcore') {
@@ -2897,6 +3637,10 @@ function restartGame() {
     } else {
         game.maxHealth = 5;
     }
+    
+    // Apply shop upgrades
+    applyShopUpgrades();
+    
     game.health = game.maxHealth;
     game.kills = 0;
     game.score = 0;
@@ -2936,10 +3680,20 @@ function restartGame() {
     game.hitIndicators = [];
     game.killStreakNotifications = [];
     game.achievementNotifications = [];
+    
+    // Reset wave mode
+    if (game.waveMode) {
+        game.currentWave = 0;
+        game.inWaveBreak = false;
+        game.enemiesRemaining = 0;
+    }
+    
     player.x = canvas.width / 2;
     player.y = canvas.height / 2;
     player.dashing = false;
     player.dashTarget = { x: player.x, y: player.y };
+    player.dashDamage = 1.0;
+    player.isTeleport = false;
 }
 
 // Tutorial Management
@@ -3014,6 +3768,8 @@ function openMainMenu() {
     document.getElementById('statsScreen').classList.add('hidden');
     document.getElementById('achievementsScreen').classList.add('hidden');
     document.getElementById('settingsScreen').classList.add('hidden');
+    const shopScreen = document.getElementById('shopScreen');
+    if (shopScreen) shopScreen.classList.add('hidden');
     game.menuOpen = true;
     game.paused = true;
 
@@ -3025,10 +3781,63 @@ function openMainMenu() {
     }
 }
 
+// Enhanced Stats Display
+function updateStatsScreen() {
+    const stats = {
+        totalKills: game.totalKills,
+        totalPlayTime: game.totalPlayTime,
+        highScore: game.highScore,
+        record: game.record,
+        level: playerProgression.level,
+        xp: playerProgression.xp,
+        coins: playerProgression.coins,
+        gamesPlayed: parseInt(localStorage.getItem('gamesPlayed') || '0'),
+        averageScore: Math.floor(game.highScore / Math.max(1, parseInt(localStorage.getItem('gamesPlayed') || '1'))),
+        favoriteMode: localStorage.getItem('favoriteMode') || 'endless'
+    };
+
+    // Update HTML elements
+    document.getElementById('totalKillsValue').textContent = stats.totalKills;
+    document.getElementById('highScoreValue').textContent = stats.highScore;
+    document.getElementById('recordValue').textContent = stats.record;
+    
+    // Add new stat elements if they don't exist
+    const statsContainer = document.querySelector('.stats-container');
+    if (statsContainer) {
+        // Remove old dynamic stats if they exist
+        const oldLevelDiv = document.getElementById('levelStat');
+        const oldCoinsDiv = document.getElementById('coinsStat');
+        if (oldLevelDiv) oldLevelDiv.remove();
+        if (oldCoinsDiv) oldCoinsDiv.remove();
+        
+        // Add level display
+        const levelDiv = document.createElement('div');
+        levelDiv.id = 'levelStat';
+        levelDiv.className = 'stat-row';
+        levelDiv.innerHTML = `
+            <span>Level:</span>
+            <span>${stats.level} (${stats.xp}/${playerProgression.getXPForNextLevel()} XP)</span>
+        `;
+        statsContainer.appendChild(levelDiv);
+
+        // Add coins display
+        const coinsDiv = document.createElement('div');
+        coinsDiv.id = 'coinsStat';
+        coinsDiv.className = 'stat-row';
+        coinsDiv.innerHTML = `
+            <span>💰 Coins:</span>
+            <span>${stats.coins}</span>
+        `;
+        statsContainer.appendChild(coinsDiv);
+    }
+}
+
 // Open stats screen
 function openStatsScreen() {
     document.getElementById('statsScreen').classList.remove('hidden');
     document.getElementById('mainMenu').classList.add('hidden');
+    const shopScreen = document.getElementById('shopScreen');
+    if (shopScreen) shopScreen.classList.add('hidden');
 
     // Update stats
     const hours = Math.floor(game.totalPlayTime / 3600);
@@ -3038,12 +3847,18 @@ function openStatsScreen() {
     document.getElementById('totalPlayTimeValue').textContent = `${hours}h ${minutes}m`;
     document.getElementById('highScoreValue').textContent = game.highScore;
     document.getElementById('recordValue').textContent = game.record;
+    
+    // Update enhanced stats
+    updateStatsScreen();
 }
+
 
 // Open achievements screen
 function openAchievementsScreen() {
     document.getElementById('achievementsScreen').classList.remove('hidden');
     document.getElementById('mainMenu').classList.add('hidden');
+    const shopScreen = document.getElementById('shopScreen');
+    if (shopScreen) shopScreen.classList.add('hidden');
 
     // Generate achievements list
     const achievementsList = document.getElementById('achievementsList');
@@ -3075,6 +3890,8 @@ function openAchievementsScreen() {
 function openSettingsScreen() {
     document.getElementById('settingsScreen').classList.remove('hidden');
     document.getElementById('mainMenu').classList.add('hidden');
+    const shopScreen = document.getElementById('shopScreen');
+    if (shopScreen) shopScreen.classList.add('hidden');
 
     // Update language button states
     document.querySelectorAll('.lang-button').forEach(btn => {
@@ -3087,9 +3904,20 @@ function openSettingsScreen() {
 
 // Close all screens and start game mode selection
 function startGameFromMenu() {
-    document.getElementById('mainMenu').classList.add('hidden');
-    document.getElementById('modeSelection').classList.remove('hidden');
+    console.log('startGameFromMenu called');
+    const mainMenu = document.getElementById('mainMenu');
+    const modeSelection = document.getElementById('modeSelection');
+    
+    if (mainMenu) {
+        mainMenu.classList.add('hidden');
+    }
+    
+    if (modeSelection) {
+        modeSelection.classList.remove('hidden');
+    }
+    
     game.paused = true;
+    game.menuOpen = false;
 }
 
 // Initialize menu
@@ -3114,17 +3942,61 @@ function initMenu() {
         resumeButton.textContent = t('resume');
     }
 
-    // Main menu buttons
-    document.getElementById('btnPlayGame').addEventListener('click', startGameFromMenu);
-    document.getElementById('btnStats').addEventListener('click', openStatsScreen);
-    document.getElementById('btnAchievements').addEventListener('click', openAchievementsScreen);
-    document.getElementById('btnSettings').addEventListener('click', openSettingsScreen);
+    // Main menu buttons - ensure they're properly initialized
+    const btnPlayGame = document.getElementById('btnPlayGame');
+    if (btnPlayGame) {
+        // Remove any existing event listeners by cloning
+        const newPlayBtn = btnPlayGame.cloneNode(true);
+        btnPlayGame.parentNode.replaceChild(newPlayBtn, btnPlayGame);
+        // Re-get the element after replacement
+        document.getElementById('btnPlayGame').onclick = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Play Game button clicked');
+            startGameFromMenu();
+            return false;
+        };
+    } else {
+        console.error('btnPlayGame button not found in DOM!');
+    }
+    
+    const btnStats = document.getElementById('btnStats');
+    if (btnStats) {
+        const newStatsBtn = btnStats.cloneNode(true);
+        btnStats.parentNode.replaceChild(newStatsBtn, btnStats);
+        document.getElementById('btnStats').onclick = openStatsScreen;
+    }
+    
+    const btnAchievements = document.getElementById('btnAchievements');
+    if (btnAchievements) {
+        const newAchievementsBtn = btnAchievements.cloneNode(true);
+        btnAchievements.parentNode.replaceChild(newAchievementsBtn, btnAchievements);
+        document.getElementById('btnAchievements').onclick = openAchievementsScreen;
+    }
+    
+    const btnSettings = document.getElementById('btnSettings');
+    if (btnSettings) {
+        const newSettingsBtn = btnSettings.cloneNode(true);
+        btnSettings.parentNode.replaceChild(newSettingsBtn, btnSettings);
+        document.getElementById('btnSettings').onclick = openSettingsScreen;
+    }
+    
+    const btnShop = document.getElementById('btnShop');
+    if (btnShop) {
+        const newShopBtn = btnShop.cloneNode(true);
+        btnShop.parentNode.replaceChild(newShopBtn, btnShop);
+        document.getElementById('btnShop').onclick = openShopScreen;
+    }
 
     // Back buttons
     document.getElementById('btnBackToMenu').addEventListener('click', openMainMenu);
     document.getElementById('btnBackFromStats').addEventListener('click', openMainMenu);
     document.getElementById('btnBackFromAchievements').addEventListener('click', openMainMenu);
     document.getElementById('btnBackFromSettings').addEventListener('click', openMainMenu);
+    const btnBackFromShop = document.getElementById('btnBackFromShop');
+    if (btnBackFromShop) {
+        btnBackFromShop.addEventListener('click', openMainMenu);
+    }
 
     // Language buttons
     document.querySelectorAll('.lang-button').forEach(btn => {
@@ -3141,39 +4013,16 @@ function initMenu() {
 function initTutorial() {
     const tutorialOverlay = document.getElementById('tutorialOverlay');
     const modeSelection = document.getElementById('modeSelection');
-    const startGameBtn = document.getElementById('startGameBtn');
-    const dontShowAgainCheckbox = document.getElementById('dontShowAgain');
-
-    // Check if user has chosen to skip tutorial
-    const skipTutorial = localStorage.getItem('skipTutorial') === 'true';
-
-    if (skipTutorial) {
-        // Show mode selection instead
-        modeSelection.classList.remove('hidden');
+    
+    // Always skip tutorial - go straight to mode selection
+    if (tutorialOverlay) {
         tutorialOverlay.classList.add('hidden');
-        game.tutorialShown = false;
-        game.paused = true;
-    } else {
-        // Show tutorial and pause game
-        tutorialOverlay.classList.remove('hidden');
-        modeSelection.classList.add('hidden');
-        game.tutorialShown = true;
-        game.paused = true;
     }
-
-    // Handle start game button
-    startGameBtn.addEventListener('click', () => {
-        // Save preference if checkbox is checked
-        if (dontShowAgainCheckbox.checked) {
-            localStorage.setItem('skipTutorial', 'true');
-        }
-
-        // Hide tutorial, show mode selection
-        tutorialOverlay.classList.add('hidden');
+    if (modeSelection) {
         modeSelection.classList.remove('hidden');
-        game.tutorialShown = false;
-        game.paused = true;
-    });
+    }
+    game.tutorialShown = false;
+    game.paused = true;
 
     // Handle game mode selection
     document.querySelectorAll('.mode-button').forEach(button => {
@@ -3184,11 +4033,24 @@ function initTutorial() {
             // Set mode-specific targets
             if (mode === 'timeAttack') {
                 game.gameModeTarget = 300; // 5 minutes in seconds
+                game.waveMode = false;
             } else if (mode === 'killTarget') {
                 game.gameModeTarget = 100; // 100 kills
+                game.waveMode = false;
             } else if (mode === 'hardcore') {
                 game.maxHealth = 1;
                 game.health = 1;
+                game.waveMode = false;
+            } else if (mode === 'waves') {
+                game.waveMode = true;
+                game.currentWave = 0;
+                game.inWaveBreak = false;
+                // Show ability selection
+                modeSelection.classList.add('hidden');
+                showAbilitySelection();
+                return;
+            } else {
+                game.waveMode = false;
             }
 
             modeSelection.classList.add('hidden');
@@ -3486,29 +4348,13 @@ function initShareButton() {
     });
 }
 
-// Show buttons on game over
+// Show buttons on game over (legacy - now uses showGameOverScreen)
 function showGameOverButtons() {
-    const quickRestartBtn = document.getElementById('quickRestartBtn');
-    const shareBtn = document.getElementById('shareScoreBtn');
-    
-    if (quickRestartBtn && game.gameOver) {
-        quickRestartBtn.style.display = 'block';
-    }
-    if (shareBtn && game.gameOver) {
-        shareBtn.style.display = 'block';
-    }
+    showGameOverScreen();
 }
 
 function hideGameOverButtons() {
-    const quickRestartBtn = document.getElementById('quickRestartBtn');
-    const shareBtn = document.getElementById('shareScoreBtn');
-    
-    if (quickRestartBtn) {
-        quickRestartBtn.style.display = 'none';
-    }
-    if (shareBtn) {
-        shareBtn.style.display = 'none';
-    }
+    hideGameOverScreen();
 }
 
 // Quick Restart Handler
@@ -3581,15 +4427,497 @@ const enhancedSoundSystem = new EnhancedSoundSystem();
 Object.setPrototypeOf(soundSystem, EnhancedSoundSystem.prototype);
 Object.assign(soundSystem, enhancedSoundSystem);
 
-// Initialize tutorial on page load
-loadAchievements();
-updateUILanguage();
-initMenu();
-initTutorial();
-initTouchControls();
-initShareButton();
-initQuickRestart();
+// Player Progression System
+class PlayerProgression {
+    constructor() {
+        this.level = parseInt(localStorage.getItem('playerLevel') || '1');
+        this.xp = parseInt(localStorage.getItem('playerXP') || '0');
+        this.coins = parseInt(localStorage.getItem('playerCoins') || '0');
+        this.unlockedSkins = JSON.parse(localStorage.getItem('unlockedSkins') || '["default"]');
+        this.currentSkin = localStorage.getItem('currentSkin') || 'default';
+    }
 
-// Start game
-gameLoop();
+    addXP(amount) {
+        this.xp += amount;
+        const xpNeeded = this.getXPForNextLevel();
+        
+        if (this.xp >= xpNeeded) {
+            this.levelUp();
+        }
+        
+        this.save();
+    }
+
+    getXPForNextLevel() {
+        return this.level * 100; // 100 XP per level
+    }
+
+    levelUp() {
+        this.level++;
+        this.xp = 0;
+        this.coins += 50; // Reward coins on level up
+        
+        // Show level up notification
+        if (game.killStreakNotifications) {
+            game.killStreakNotifications.push(
+                new KillStreakNotification(`LEVEL UP! Level ${this.level}`, '#ffd700')
+            );
+        }
+        
+        soundSystem.playPowerUp();
+        this.save();
+    }
+
+    addCoins(amount) {
+        this.coins += amount;
+        this.save();
+    }
+
+    unlockSkin(skinId) {
+        if (!this.unlockedSkins.includes(skinId)) {
+            this.unlockedSkins.push(skinId);
+            this.save();
+            return true;
+        }
+        return false;
+    }
+
+    setSkin(skinId) {
+        if (this.unlockedSkins.includes(skinId)) {
+            this.currentSkin = skinId;
+            this.save();
+            return true;
+        }
+        return false;
+    }
+
+    save() {
+        localStorage.setItem('playerLevel', this.level.toString());
+        localStorage.setItem('playerXP', this.xp.toString());
+        localStorage.setItem('playerCoins', this.coins.toString());
+        localStorage.setItem('unlockedSkins', JSON.stringify(this.unlockedSkins));
+        localStorage.setItem('currentSkin', this.currentSkin);
+    }
+}
+
+// Initialize progression system
+const playerProgression = new PlayerProgression();
+
+// Shop System
+const shopItems = {
+    skins: [
+        { id: 'red', type: 'skin', name: 'Fire Ninja', desc: 'Burning hot style', icon: '🔥', cost: 100 },
+        { id: 'blue', type: 'skin', name: 'Ice Ninja', desc: 'Cool as ice', icon: '❄️', cost: 100 },
+        { id: 'shadow', type: 'skin', name: 'Shadow Ninja', desc: 'Dark and mysterious', icon: '🌑', cost: 250 },
+        { id: 'gold', type: 'skin', name: 'Golden Ninja', desc: 'Legendary warrior', icon: '⭐', cost: 500 }
+    ],
+    upgrades: [
+        { id: 'dashEnergy', type: 'upgrade', name: 'Dash Energy+', desc: '+20% max dash energy', icon: '⚡', cost: 200, effect: 'dashEnergy' },
+        { id: 'startingHealth', type: 'upgrade', name: 'Extra Health', desc: '+1 starting health', icon: '❤️', cost: 300, effect: 'health' },
+        { id: 'dashRegen', type: 'upgrade', name: 'Faster Regen', desc: '+50% dash energy regen', icon: '🔄', cost: 250, effect: 'regen' },
+        { id: 'swordLength', type: 'upgrade', name: 'Longer Sword', desc: '+10 sword length', icon: '🗡️', cost: 400, effect: 'sword' }
+    ],
+    boosts: [
+        { id: 'speedBoost', type: 'boost', name: 'Speed Start', desc: 'Start with 2x speed (1 game)', icon: '💨', cost: 50, effect: 'speed' },
+        { id: 'shieldStart', type: 'boost', name: 'Shield Start', desc: 'Start with shield (1 game)', icon: '🛡️', cost: 75, effect: 'shield' },
+        { id: 'doubleCoins', type: 'boost', name: 'Double Coins', desc: '2x coins this game', icon: '💰', cost: 100, effect: 'coins' }
+    ]
+};
+
+// Player upgrades storage
+let playerUpgrades = JSON.parse(localStorage.getItem('playerUpgrades') || '{}');
+let activeBoosts = JSON.parse(localStorage.getItem('activeBoosts') || '[]');
+
+function saveUpgrades() {
+    localStorage.setItem('playerUpgrades', JSON.stringify(playerUpgrades));
+    localStorage.setItem('activeBoosts', JSON.stringify(activeBoosts));
+}
+
+function openShopScreen() {
+    document.getElementById('shopScreen').classList.remove('hidden');
+    document.getElementById('mainMenu').classList.add('hidden');
+    updateShopDisplay();
+}
+
+function updateShopDisplay() {
+    // Update coins display
+    const coinsValue = document.getElementById('shopCoinsValue');
+    if (coinsValue) {
+        coinsValue.textContent = playerProgression.coins;
+    }
+    
+    // Update shop items
+    renderShopItems('skins');
+    
+    // Setup tab switching
+    document.querySelectorAll('.shop-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.shop-tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            renderShopItems(tab.dataset.tab);
+        });
+    });
+}
+
+function renderShopItems(category) {
+    const itemsList = document.getElementById('shopItemsList');
+    if (!itemsList) return;
+    
+    itemsList.innerHTML = '';
+    const items = shopItems[category] || [];
+    
+    items.forEach(item => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'shop-item';
+        
+        // Check if owned/equipped
+        let isOwned = false;
+        let isEquipped = false;
+        
+        if (item.type === 'skin') {
+            isOwned = playerProgression.unlockedSkins.includes(item.id);
+            isEquipped = playerProgression.currentSkin === item.id;
+        } else if (item.type === 'upgrade') {
+            isOwned = playerUpgrades[item.id] || false;
+        } else if (item.type === 'boost') {
+            isOwned = activeBoosts.includes(item.id);
+        }
+        
+        if (isOwned) itemDiv.classList.add('owned');
+        if (isEquipped) itemDiv.classList.add('equipped');
+        if (!isOwned && playerProgression.coins >= item.cost) {
+            itemDiv.classList.add('new');
+        }
+        
+        const canAfford = playerProgression.coins >= item.cost;
+        
+        itemDiv.innerHTML = `
+            <div class="shop-item-icon">${item.icon}</div>
+            <div class="shop-item-name">${item.name || item.id}</div>
+            <div class="shop-item-desc">${item.desc}</div>
+            <div class="shop-item-price">
+                <span class="coins-icon">💰</span>
+                <span>${item.cost}</span>
+            </div>
+            <button class="shop-item-buy-btn" ${!canAfford && !isOwned ? 'disabled' : ''}>
+                ${isEquipped ? 'Equipped' : isOwned ? (item.type === 'skin' ? 'Equip' : 'Owned') : 'Buy'}
+            </button>
+        `;
+        
+        const buyBtn = itemDiv.querySelector('.shop-item-buy-btn');
+        buyBtn.addEventListener('click', () => {
+            if (isEquipped) return;
+            
+            if (isOwned && item.type === 'skin') {
+                // Equip skin
+                playerProgression.setSkin(item.id);
+                updateShopDisplay();
+                soundSystem.playPowerUp();
+            } else if (!isOwned && canAfford) {
+                // Purchase item
+                purchaseItem(item);
+            }
+        });
+        
+        itemsList.appendChild(itemDiv);
+    });
+}
+
+function purchaseItem(item) {
+    if (playerProgression.coins < item.cost) {
+        alert('Not enough coins!');
+        return;
+    }
+    
+    playerProgression.coins -= item.cost;
+    playerProgression.save();
+    
+    if (item.type === 'skin') {
+        playerProgression.unlockSkin(item.id);
+        playerProgression.setSkin(item.id);
+    } else if (item.type === 'upgrade') {
+        playerUpgrades[item.id] = true;
+    } else if (item.type === 'boost') {
+        activeBoosts.push(item.id);
+    }
+    
+    saveUpgrades();
+    updateShopDisplay();
+    soundSystem.playPowerUp();
+    
+    // Show purchase notification
+    if (game.killStreakNotifications) {
+        game.killStreakNotifications.push(
+            new KillStreakNotification(`Purchased: ${item.name || item.id}!`, '#4a9eff')
+        );
+    }
+}
+
+// Ninja Skins
+const ninjaSkins = {
+    default: {
+        name: 'Classic Ninja',
+        bodyColor: 'rgba(30, 30, 30, 1)',
+        headColor: 'rgba(40, 40, 40, 1)',
+        eyeColor: 'rgba(100, 200, 255, 1)',
+        cost: 0
+    },
+    red: {
+        name: 'Fire Ninja',
+        bodyColor: 'rgba(139, 0, 0, 1)',
+        headColor: 'rgba(178, 34, 34, 1)',
+        eyeColor: 'rgba(255, 69, 0, 1)',
+        cost: 100
+    },
+    blue: {
+        name: 'Ice Ninja',
+        bodyColor: 'rgba(0, 0, 139, 1)',
+        headColor: 'rgba(30, 144, 255, 1)',
+        eyeColor: 'rgba(173, 216, 230, 1)',
+        cost: 100
+    },
+    gold: {
+        name: 'Golden Ninja',
+        bodyColor: 'rgba(184, 134, 11, 1)',
+        headColor: 'rgba(255, 215, 0, 1)',
+        eyeColor: 'rgba(255, 255, 255, 1)',
+        cost: 500
+    },
+    shadow: {
+        name: 'Shadow Ninja',
+        bodyColor: 'rgba(0, 0, 0, 1)',
+        headColor: 'rgba(20, 20, 20, 1)',
+        eyeColor: 'rgba(138, 43, 226, 1)',
+        cost: 250
+    }
+};
+
+// Combo Visual Effects
+function drawComboEffects() {
+    if (game.combo >= 10) {
+        // Screen border glow
+        const intensity = Math.min(game.combo / 50, 1);
+        const pulse = Math.sin(Date.now() / 100) * 0.3 + 0.7;
+        
+        ctx.save();
+        ctx.strokeStyle = `rgba(255, 215, 0, ${intensity * pulse * 0.5})`;
+        ctx.lineWidth = 10;
+        ctx.shadowBlur = 30;
+        ctx.shadowColor = '#ffd700';
+        ctx.strokeRect(5, 5, canvas.width - 10, canvas.height - 10);
+        ctx.restore();
+    }
+
+    if (game.combo >= 25) {
+        // Chromatic aberration effect
+        ctx.save();
+        ctx.globalCompositeOperation = 'screen';
+        ctx.globalAlpha = 0.05;
+        ctx.fillStyle = '#ff0000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#00ff00';
+        ctx.fillRect(2, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#0000ff';
+        ctx.fillRect(-2, 0, canvas.width, canvas.height);
+        ctx.restore();
+    }
+}
+
+// Performance Optimization
+const performance = {
+    fps: 60,
+    lastTime: Date.now(),
+    frames: 0,
+    lowPerformanceMode: false,
+    
+    update() {
+        this.frames++;
+        const now = Date.now();
+        if (now - this.lastTime >= 1000) {
+            this.fps = this.frames;
+            this.frames = 0;
+            this.lastTime = now;
+            
+            // Auto-enable low performance mode if FPS drops
+            if (this.fps < 30 && !this.lowPerformanceMode) {
+                this.enableLowPerformanceMode();
+            } else if (this.fps > 50 && this.lowPerformanceMode) {
+                this.disableLowPerformanceMode();
+            }
+        }
+    },
+    
+    enableLowPerformanceMode() {
+        this.lowPerformanceMode = true;
+        // Reduce particle count
+        if (game.particles && game.particles.length > 50) {
+            game.particles = game.particles.slice(0, 50);
+        }
+        console.log('Low performance mode enabled');
+    },
+    
+    disableLowPerformanceMode() {
+        this.lowPerformanceMode = false;
+        console.log('Low performance mode disabled');
+    },
+    
+    draw() {
+        // Optional: Show FPS counter (uncomment to enable)
+        // ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        // ctx.font = '12px Arial';
+        // ctx.textAlign = 'right';
+        // ctx.fillText(`FPS: ${this.fps}`, canvas.width - 10, 20);
+    }
+};
+
+// Ability Loadout System
+const availableAbilities = {
+    quickDash: { id: 'quickDash', name: 'Quick Dash', desc: '50% cost, 50% range, instant', icon: '⚡', category: 'dash' },
+    powerDash: { id: 'powerDash', name: 'Power Dash', desc: '200% cost, 200% range, 2x damage', icon: '💥', category: 'dash' },
+    multiDash: { id: 'multiDash', name: 'Multi-Dash', desc: 'Dash through line of enemies', icon: '🌀', category: 'dash' },
+    teleport: { id: 'teleport', name: 'Teleport', desc: 'Instant reposition, no damage', icon: '✨', category: 'dash' },
+    parry: { id: 'parry', name: 'Parry', desc: 'Block next attack, counter-attack', icon: '🛡️', category: 'defense' },
+    dodgeRoll: { id: 'dodgeRoll', name: 'Dodge Roll', desc: 'Brief invulnerability', icon: '🎯', category: 'defense' },
+    whirlwind: { id: 'whirlwind', name: 'Whirlwind', desc: 'Spin attack hits all nearby', icon: '🌪️', category: 'offense' },
+    chainLightning: { id: 'chainLightning', name: 'Chain Lightning', desc: 'Dash chains to nearby enemies', icon: '⚡', category: 'offense' },
+    markedTarget: { id: 'markedTarget', name: 'Marked Target', desc: 'Next dash does 3x damage', icon: '🎯', category: 'offense' }
+};
+
+function showAbilitySelection() {
+    const abilityScreen = document.getElementById('abilitySelection');
+    if (!abilityScreen) return;
+    
+    abilityScreen.classList.remove('hidden');
+    game.selectedAbilities = [];
+    
+    const abilityList = document.getElementById('abilityList');
+    if (!abilityList) return;
+    
+    abilityList.innerHTML = '';
+    
+    Object.values(availableAbilities).forEach(ability => {
+        const abilityDiv = document.createElement('div');
+        abilityDiv.className = 'ability-item';
+        abilityDiv.dataset.abilityId = ability.id;
+        abilityDiv.innerHTML = `
+            <div class="ability-icon">${ability.icon}</div>
+            <div class="ability-name">${ability.name}</div>
+            <div class="ability-desc">${ability.desc}</div>
+        `;
+        
+        abilityDiv.addEventListener('click', () => {
+            toggleAbility(ability.id);
+        });
+        
+        abilityList.appendChild(abilityDiv);
+    });
+    
+    updateAbilitySelection();
+}
+
+function toggleAbility(abilityId) {
+    const index = game.selectedAbilities.indexOf(abilityId);
+    if (index > -1) {
+        game.selectedAbilities.splice(index, 1);
+    } else {
+        if (game.selectedAbilities.length < 3) {
+            game.selectedAbilities.push(abilityId);
+        }
+    }
+    updateAbilitySelection();
+}
+
+function updateAbilitySelection() {
+    const count = game.selectedAbilities.length;
+    document.getElementById('selectedCount').textContent = count;
+    document.getElementById('btnStartWithAbilities').disabled = count === 0;
+    
+    // Update visual selection
+    document.querySelectorAll('.ability-item').forEach(item => {
+        const abilityId = item.dataset.abilityId;
+        if (game.selectedAbilities.includes(abilityId)) {
+            item.classList.add('selected');
+        } else {
+            item.classList.remove('selected');
+        }
+    });
+}
+
+function applySelectedAbilities() {
+    game.activeAbilities = {};
+    game.selectedAbilities.forEach(abilityId => {
+        game.activeAbilities[abilityId] = true;
+    });
+}
+
+// Initialize on page load - ensure DOM is ready
+function initializeGame() {
+    // Wait for DOM to be fully loaded
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializeGame);
+        return;
+    }
+    
+    loadAchievements();
+    updateUILanguage();
+    initMenu();
+    initTutorial();
+    initTouchControls();
+    initShareButton();
+    initQuickRestart();
+    initMobileUltimateButton();
+    
+    // Initialize ability selection handlers
+    const btnStartWithAbilities = document.getElementById('btnStartWithAbilities');
+    const btnSkipAbilities = document.getElementById('btnSkipAbilities');
+    if (btnStartWithAbilities) {
+        btnStartWithAbilities.addEventListener('click', () => {
+            applySelectedAbilities();
+            document.getElementById('abilitySelection').classList.add('hidden');
+            game.tutorialShown = false;
+            game.paused = false;
+            restartGame();
+        });
+    }
+    if (btnSkipAbilities) {
+        btnSkipAbilities.addEventListener('click', () => {
+            game.selectedAbilities = [];
+            applySelectedAbilities();
+            document.getElementById('abilitySelection').classList.add('hidden');
+            game.tutorialShown = false;
+            game.paused = false;
+            restartGame();
+        });
+    }
+    
+    const btnContinueWave = document.getElementById('btnContinueWave');
+    if (btnContinueWave) {
+        btnContinueWave.addEventListener('click', continueWave);
+    }
+    
+    // Game Over screen buttons
+    const btnPlayAgain = document.getElementById('btnPlayAgain');
+    const btnMainMenu = document.getElementById('btnMainMenu');
+    if (btnPlayAgain) {
+        btnPlayAgain.addEventListener('click', () => {
+            hideGameOverScreen();
+            restartGame();
+        });
+    }
+    if (btnMainMenu) {
+        btnMainMenu.addEventListener('click', () => {
+            hideGameOverScreen();
+            openMainMenu();
+        });
+    }
+
+    // Initialize background stars
+    initBackgroundStars();
+
+    // Start game
+    gameLoop();
+}
+
+// Start initialization
+initializeGame();
 
